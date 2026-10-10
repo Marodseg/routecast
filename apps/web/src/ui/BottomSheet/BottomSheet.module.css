@@ -1,0 +1,62 @@
+.sheet {
+  position: absolute;
+  z-index: var(--z-sheet);
+  left: 0;
+  right: 0;
+  top: 48px;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-top: 2px solid var(--ink);
+  border-radius: var(--radius-l) var(--radius-l) 0 0;
+  box-shadow: 0 -16px 32px -28px color-mix(in oklch, var(--ink) 60%, transparent);
+  /* Física tipo resorte amortiguado: rápido al principio, sin sobrepasar. */
+  transition: transform var(--duration-slow) cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+  touch-action: none;
+}
+
+.dragging,
+.instant {
+  transition: none;
+}
+
+.handle {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 100%;
+  height: 28px;
+  border: 0;
+  background: none;
+  cursor: grab;
+  touch-action: none;
+}
+
+.dragging .handle {
+  cursor: grabbing;
+}
+
+.grip {
+  width: 40px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--rule-strong);
+}
+
+.handle:focus-visible {
+  outline-offset: -4px;
+}
+
+.content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  padding: 0 var(--space-4) calc(var(--space-6) + env(safe-area-inset-bottom));
+}
+
+.sheet[data-snap="peek"] .content {
+  overflow: hidden;
+}

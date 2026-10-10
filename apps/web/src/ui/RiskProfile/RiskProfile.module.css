@@ -1,0 +1,103 @@
+.mini {
+  display: flex;
+  gap: 1px;
+  height: 10px;
+  width: 100%;
+}
+
+.mini > i {
+  flex-basis: 0;
+  min-width: 2px;
+}
+
+.full {
+  position: relative;
+  padding-bottom: 20px;
+}
+
+.track {
+  cursor: crosshair;
+  outline-offset: 3px;
+  touch-action: pan-y;
+}
+
+.svg {
+  display: block;
+  width: 100%;
+  height: 64px;
+}
+
+.bar {
+  fill: var(--surface-sunken);
+  transition:
+    y var(--duration) var(--ease-out),
+    height var(--duration) var(--ease-out);
+}
+.bar[data-level="0"] {
+  fill: var(--risk-0);
+}
+.bar[data-level="1"] {
+  fill: var(--risk-1);
+}
+.bar[data-level="2"] {
+  fill: var(--risk-2);
+}
+.bar[data-level="3"] {
+  fill: var(--risk-3);
+}
+.pat {
+  fill: var(--risk-pattern);
+}
+.crest {
+  stroke: var(--ink);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+.base {
+  stroke: var(--ink);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.cursor {
+  stroke: var(--accent);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.axis {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 16px;
+  font-size: var(--text-xs);
+  color: var(--ink-subtle);
+}
+
+.axis > span {
+  position: absolute;
+  top: 2px;
+  transform: translateX(-50%);
+}
+
+.axis > span:first-child {
+  transform: none;
+}
+.axis > .unit {
+  right: 0;
+  left: auto;
+  transform: none;
+}
+
+.tip {
+  position: absolute;
+  top: -6px;
+  transform: translate(-50%, -100%);
+  padding: 4px 6px;
+  background: var(--ink);
+  color: var(--surface);
+  font: 500 var(--text-xs) / 1 var(--font-mono);
+  white-space: nowrap;
+  pointer-events: none;
+  border-radius: var(--radius-m);
+}

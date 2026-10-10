@@ -1,0 +1,406 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Routecast · Dirección B · Instrumento</title>
+<style>
+@font-face { font-family: 'Familjen Grotesk'; src: url(fonts/familjen-grotesk-latin-wght-normal.woff2) format('woff2'); font-weight: 400 700; font-display: swap; }
+@font-face { font-family: 'Geist'; src: url(fonts/geist-latin-wght-normal.woff2) format('woff2'); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: 'Geist Mono'; src: url(fonts/geist-mono-latin-wght-normal.woff2) format('woff2'); font-weight: 100 900; font-display: swap; }
+
+@layer tokens, base, layout, components;
+
+@layer tokens {
+  :root {
+    color-scheme: light;
+    --bg: oklch(0.93 0.007 80);
+    --surface: oklch(0.985 0.004 85);
+    --surface-2: oklch(0.955 0.006 82);
+    --land: oklch(0.915 0.008 80);
+    --sea: oklch(0.86 0.014 220);
+    --ink: oklch(0.19 0.012 70);
+    --ink-2: oklch(0.4 0.012 70);
+    --ink-3: oklch(0.55 0.01 70);
+    --rule: oklch(0.19 0.012 70 / 0.13);
+    --rule-2: oklch(0.19 0.012 70 / 0.35);
+    --accent: oklch(0.55 0.12 160);
+    --on-accent: oklch(0.985 0.004 85);
+    --r0: oklch(0.77 0.025 250);
+    --r1: oklch(0.87 0.15 95);
+    --r2: oklch(0.71 0.17 52);
+    --r3: oklch(0.53 0.2 27);
+    --pat: oklch(0.18 0.02 60 / 0.5);
+    --font-display: 'Familjen Grotesk', 'Geist', sans-serif;
+    --font-text: 'Geist', system-ui, sans-serif;
+    --font-mono: 'Geist Mono', ui-monospace, monospace;
+    --radius-s: 0px; --radius-m: 3px; --radius-l: 8px;
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --dur: 200ms;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+      color-scheme: dark;
+      --bg: oklch(0.15 0.006 70);
+      --surface: oklch(0.195 0.007 70);
+      --surface-2: oklch(0.225 0.008 70);
+      --land: oklch(0.2 0.006 70);
+      --sea: oklch(0.155 0.014 235);
+      --ink: oklch(0.94 0.008 85);
+      --ink-2: oklch(0.76 0.01 80);
+      --ink-3: oklch(0.6 0.01 78);
+      --rule: oklch(0.94 0.008 85 / 0.12);
+      --rule-2: oklch(0.94 0.008 85 / 0.3);
+      --accent: oklch(0.74 0.13 160);
+      --on-accent: oklch(0.15 0.006 70);
+      --r0: oklch(0.6 0.03 250);
+      --r1: oklch(0.86 0.14 95);
+      --r2: oklch(0.73 0.16 55);
+      --r3: oklch(0.63 0.2 27);
+      --pat: oklch(0.12 0.02 60 / 0.55);
+    }
+  }
+}
+
+@layer base {
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 400 14.5px/1.45 var(--font-text); }
+  button { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+  .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .label { font: 500 10px/1 var(--font-mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); }
+}
+
+@layer layout {
+  .app { position: relative; min-height: 100dvh; display: grid; grid-template-rows: 44dvh auto; }
+  .map-wrap { position: relative; overflow: hidden; background: var(--land); }
+  .panel { position: relative; background: var(--surface); border-top: 2px solid var(--ink); padding: 0 16px calc(24px + env(safe-area-inset-bottom)); }
+  .dial-slot { margin: 0 -16px; border-bottom: 1px solid var(--rule); }
+  .dial-dock { display: none; }
+  @media (min-width: 900px) {
+    .app { display: block; height: 100dvh; overflow: hidden; }
+    .map-wrap { position: absolute; inset: 0; }
+    .panel { position: absolute; top: 16px; left: 16px; bottom: 16px; width: 404px; overflow-y: auto; border: 1px solid var(--rule-2); border-top: 2px solid var(--ink); box-shadow: 0 24px 48px -32px oklch(0.15 0.01 70 / 0.5); }
+    .dial-slot { display: none; }
+    .dial-dock { display: block; position: absolute; bottom: 16px; left: calc(436px + (100% - 436px) / 2); transform: translateX(-50%); width: 460px; }
+  }
+}
+
+@layer components {
+  /* Marcas de registro en las esquinas: el "chasis" del instrumento */
+  .plate {
+    --m: var(--ink-2);
+    background:
+      linear-gradient(var(--m), var(--m)) top left / 9px 1px no-repeat, linear-gradient(var(--m), var(--m)) top left / 1px 9px no-repeat,
+      linear-gradient(var(--m), var(--m)) top right / 9px 1px no-repeat, linear-gradient(var(--m), var(--m)) top right / 1px 9px no-repeat,
+      linear-gradient(var(--m), var(--m)) bottom left / 9px 1px no-repeat, linear-gradient(var(--m), var(--m)) bottom left / 1px 9px no-repeat,
+      linear-gradient(var(--m), var(--m)) bottom right / 9px 1px no-repeat, linear-gradient(var(--m), var(--m)) bottom right / 1px 9px no-repeat;
+  }
+
+  .bar { display: flex; align-items: center; justify-content: space-between; height: 48px; border-bottom: 1px solid var(--rule); }
+  .wordmark { display: flex; align-items: center; gap: 9px; font: 700 13px/1 var(--font-display); letter-spacing: 0.18em; text-transform: uppercase; }
+  .wordmark i { width: 12px; height: 12px; background: var(--accent); display: block; clip-path: polygon(0 100%, 50% 0, 100% 100%); }
+  .wordmark small { font: 500 10px var(--font-mono); letter-spacing: 0.05em; color: var(--ink-3); text-transform: none; }
+  .tools { display: flex; }
+  .tool { height: 32px; min-width: 36px; border: 1px solid var(--rule); background: none; margin-left: -1px; cursor: pointer; font: 500 11px var(--font-mono); letter-spacing: 0.06em; }
+  .tool:hover { background: var(--surface-2); }
+
+  .query { margin: 16px 0 0; padding: 12px; display: grid; grid-template-columns: 1fr auto; row-gap: 10px; }
+  .q-field { display: grid; gap: 4px; }
+  .q-value { font: 600 24px/1 var(--font-display); letter-spacing: -0.015em; }
+  .q-coord { font: 400 10.5px var(--font-mono); color: var(--ink-3); align-self: end; text-align: right; }
+  .q-sep { grid-column: 1 / -1; height: 1px; background: var(--rule); position: relative; }
+  .q-swap { position: absolute; right: 72px; top: -14px; width: 28px; height: 28px; background: var(--surface); border: 1px solid var(--rule-2); display: grid; place-items: center; cursor: pointer; }
+
+  /* ---------- Dial ---------- */
+  .dial { position: relative; background: var(--surface); padding: 12px 12px 10px; user-select: none; }
+  .dial-dock .dial { border: 1px solid var(--rule-2); box-shadow: 0 24px 48px -32px oklch(0.15 0.01 70 / 0.5); }
+  .dial-top { display: flex; justify-content: space-between; align-items: baseline; }
+  .dial-now { height: 26px; padding: 0 10px; border: 1px solid var(--rule-2); background: none; font: 500 10px var(--font-mono); letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; }
+  .dial-now:hover { background: var(--surface-2); }
+  .dial-face { position: relative; height: 168px; cursor: grab; touch-action: pan-y; outline-offset: 2px; }
+  .dial-face:active { cursor: grabbing; }
+  .dial-face svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: hidden; }
+  .dial-rot { transition: transform var(--dur) var(--ease-out); }
+  .dial-rot.dragging { transition: none; }
+  .d-minor { stroke: var(--ink-3); stroke-width: 1; }
+  .d-major { stroke: var(--ink); stroke-width: 1.6; }
+  .d-label { font: 500 11px var(--font-mono); fill: var(--ink-2); }
+  .d-band { stroke-width: 7; fill: none; }
+  .d-band-g { opacity: 0.35; transition: opacity var(--dur); }
+  .d-band-g.is-sel { opacity: 1; }
+  .d-key { font: 600 9px var(--font-mono); fill: var(--ink-3); }
+  .d-key.is-sel { fill: var(--ink); }
+  .d-needle { stroke: var(--accent); stroke-width: 2.5; }
+  .d-needle-head { fill: var(--accent); }
+  .d-now { fill: var(--accent); }
+  .d-now-label { font: 600 9px var(--font-mono); fill: var(--accent); letter-spacing: 0.1em; }
+  .dial-read { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); text-align: center; pointer-events: none; }
+  .dial-time { font: 600 40px/1 var(--font-mono); letter-spacing: -0.04em; font-variant-numeric: tabular-nums; }
+  .dial-delta { font: 500 11px var(--font-mono); color: var(--ink-2); margin-top: 4px; }
+  .dial-fade { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(90deg, var(--surface), transparent 18%, transparent 82%, var(--surface)); }
+
+  /* ---------- Comparador ---------- */
+  .cmp-head { display: grid; grid-template-columns: 1fr 66px 86px 52px; gap: 8px; padding: 22px 0 8px; border-bottom: 1px solid var(--ink); }
+  .cmp-head .label:not(:first-child) { text-align: right; }
+  .cmp { list-style: none; margin: 0; padding: 0; }
+  .cmp-row { border-bottom: 1px solid var(--rule); }
+  .cmp-btn { width: 100%; display: grid; grid-template-columns: 1fr 66px 86px 52px; gap: 6px 8px; align-items: baseline; padding: 12px 8px 12px; margin: 0 -8px; width: calc(100% + 16px); background: none; border: 0; text-align: left; cursor: pointer; transition: background var(--dur), color var(--dur); }
+  .cmp-btn:hover { background: var(--surface-2); }
+  .is-selected .cmp-btn { background: var(--ink); color: var(--surface); }
+  .is-selected .cmp-sub, .is-selected .cmp-worst { color: oklch(from var(--surface) l c h / 0.72); }
+  .cmp-name { display: flex; gap: 8px; align-items: baseline; min-width: 0; }
+  .cmp-id { font: 700 12px var(--font-mono); width: 18px; height: 18px; display: inline-grid; place-items: center; border: 1px solid currentColor; flex: none; }
+  .cmp-roads { font: 600 15.5px/1.15 var(--font-display); white-space: nowrap; }
+  .cmp-num { font: 500 14px var(--font-mono); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+  .cmp-risk { display: flex; justify-content: flex-end; align-items: center; gap: 6px; font: 600 12px var(--font-display); letter-spacing: 0.02em; }
+  .cmp-sub { grid-column: 1 / -1; font-size: 12px; color: var(--ink-2); margin-top: -2px; }
+  .profile { grid-column: 1 / -1; display: flex; height: 10px; gap: 1px; margin-top: 4px; }
+  .profile i { flex: 1; }
+  .cmp-worst { grid-column: 1 / -1; font: 400 12px var(--font-mono); color: var(--ink-2); }
+
+  .fill-r0 { background: var(--r0); }
+  .fill-r1 { background: radial-gradient(circle, var(--pat) 0.9px, transparent 1.3px) 0 0 / 4px 4px, var(--r1); }
+  .fill-r2 { background: repeating-linear-gradient(45deg, var(--pat) 0 1.4px, transparent 1.4px 4px), var(--r2); }
+  .fill-r3 { background: repeating-linear-gradient(45deg, var(--pat) 0 1.4px, transparent 1.4px 4px), repeating-linear-gradient(-45deg, var(--pat) 0 1.4px, transparent 1.4px 4px), var(--r3); }
+  .sw { width: 12px; height: 12px; display: inline-block; flex: none; outline: 1px solid oklch(0.2 0.02 60 / 0.3); outline-offset: -1px; }
+  .ico { width: 15px; height: 15px; flex: none; }
+
+  /* ---------- Lectura principal + RoadWind ---------- */
+  .readout { display: grid; grid-template-columns: 1fr 120px; gap: 12px; align-items: center; margin-top: 18px; padding: 14px; }
+  .big { font: 600 64px/0.9 var(--font-mono); letter-spacing: -0.06em; font-variant-numeric: tabular-nums; }
+  .big small { font: 500 13px var(--font-mono); letter-spacing: 0; margin-left: 6px; color: var(--ink-2); }
+  .readout p { margin: 8px 0 0; font-size: 12.5px; color: var(--ink-2); }
+  .roadwind { width: 120px; height: 120px; }
+  .rw-ring { fill: var(--surface-2); stroke: var(--rule-2); }
+  .rw-tick { stroke: var(--ink-3); }
+  .rw-n { font: 600 9px var(--font-mono); fill: var(--accent); }
+  .rw-road { stroke: var(--ink-2); stroke-width: 10; }
+  .rw-road-center { stroke: var(--surface); stroke-width: 1.2; stroke-dasharray: 3 3; }
+  .rw-wind { stroke: var(--ink); stroke-width: 1.6; }
+  .rw-arrowhead { fill: var(--ink); }
+  .rw-cross { stroke: var(--r3); stroke-width: 4; }
+  .rw-cross-end { fill: var(--r3); }
+
+  .legend { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; margin: 18px 0 12px; font-size: 12px; }
+  .legend span { display: flex; align-items: center; gap: 6px; }
+  .note { font-size: 11.5px; color: var(--ink-3); border-left: 2px solid var(--accent); padding-left: 10px; margin: 0 0 14px; }
+  .attrib { font: 400 10.5px/1.5 var(--font-mono); color: var(--ink-3); border-top: 1px solid var(--rule); padding-top: 12px; margin: 0; }
+
+  /* ---------- Mapa ---------- */
+  .map { position: absolute; inset: 0; width: 100%; height: 100%; display: block; --u: 1; }
+  .land { fill: var(--land); }
+  .sea { fill: var(--sea); }
+  .sea-hatch { display: none; }
+  .coast { fill: none; stroke: var(--ink-3); stroke-width: calc(var(--u) * 1px); }
+  .contour { fill: none; stroke: oklch(from var(--ink) l c h / 0.09); stroke-width: calc(var(--u) * 1px); }
+  .contour-top { fill: oklch(from var(--ink) l c h / 0.035); }
+  .grat { stroke: none; }
+  .grat-major { stroke: oklch(from var(--ink) l c h / 0.12); stroke-width: calc(var(--u) * 1px); stroke-dasharray: calc(var(--u) * 2px) calc(var(--u) * 6px); }
+  .grat-label { font: 500 calc(var(--u) * 9.5px) var(--font-mono); fill: var(--ink-3); letter-spacing: 0.05em; }
+  .place { font: 500 calc(var(--u) * 10.5px) var(--font-text); fill: var(--ink-2); letter-spacing: 0.08em; text-transform: uppercase; paint-order: stroke; stroke: var(--land); stroke-width: calc(var(--u) * 3px); }
+  .place.rank-1 { font: 700 calc(var(--u) * 13px) var(--font-display); fill: var(--ink); letter-spacing: 0.12em; }
+  .place-dot { fill: var(--land); stroke: var(--ink-2); stroke-width: calc(var(--u) * 1.4px); }
+  .place-dot.rank-1 { fill: var(--accent); stroke: var(--ink); }
+  .route-reveal { fill: none; stroke: #fff; stroke-width: calc(var(--u) * 60px); stroke-dasharray: 1 1; stroke-dashoffset: 1; animation: reveal 900ms var(--ease-out) 100ms forwards; }
+  @keyframes reveal { to { stroke-dashoffset: 0; } }
+  .route-casing { fill: none; stroke: var(--surface); stroke-width: calc(var(--u) * 7px); stroke-linejoin: miter; }
+  .seg, .seg-pattern { fill: none; stroke-width: calc(var(--u) * 3px); transition: stroke var(--dur); }
+  .seg-pattern { opacity: 0; }
+  .route:not(.is-selected) .seg { stroke: var(--ink-3) !important; }
+  .route:not(.is-selected) .chevron { display: none; }
+  .is-selected .route-casing { stroke-width: calc(var(--u) * 14px); }
+  .is-selected .seg, .is-selected .seg-pattern { stroke-width: calc(var(--u) * 9px); }
+  .is-selected .seg-pattern { opacity: 1; }
+  .seg.r0 { stroke: var(--r0); } .seg.r1 { stroke: var(--r1); } .seg.r2 { stroke: var(--r2); } .seg.r3 { stroke: var(--r3); }
+  .pat-ink { fill: var(--pat); }
+  .chevron { fill: none; stroke: var(--ink); stroke-width: 1.4; }
+  .tick { stroke: var(--ink); stroke-width: 1.4; }
+  .tick-label { font: 600 calc(var(--u) * 10px) var(--font-mono); fill: var(--ink); paint-order: stroke; stroke: var(--land); stroke-width: calc(var(--u) * 3px); }
+  .route-badge { cursor: pointer; }
+  .route-badge-box { fill: var(--surface); stroke: var(--ink); stroke-width: 1.2; }
+  .route-badge-text { font: 700 11px var(--font-mono); fill: var(--ink); }
+  .route-badge.is-selected .route-badge-box { fill: var(--accent); stroke: var(--accent); }
+  .route-badge.is-selected .route-badge-text { fill: var(--on-accent); }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition-duration: 1ms !important; animation-duration: 1ms !important; animation-delay: 0ms !important; }
+  }
+}
+</style>
+</head>
+<body>
+<main class="app">
+  <h1 class="visually-hidden">Routecast: rutas de Málaga a Granada</h1>
+  <div class="map-wrap">
+    <svg class="map" id="map" role="img" aria-label="Mapa: tres rutas de Málaga a Granada coloreadas por riesgo"></svg>
+    <div class="dial-dock" id="dock"></div>
+  </div>
+
+  <aside class="panel" aria-label="Rutas y riesgo">
+    <header class="bar">
+      <span class="wordmark"><i></i>Routecast <small>beta</small></span>
+      <span class="tools"><button class="tool" type="button" aria-label="Cambiar idioma a inglés">EN</button><button class="tool" type="button" id="theme" aria-label="Cambiar tema">◑</button></span>
+    </header>
+
+    <div class="query plate">
+      <div class="q-field"><span class="label">Origen</span><span class="q-value">Málaga</span></div>
+      <span class="q-coord">36.72°N<br />4.42°O</span>
+      <div class="q-sep"><button class="q-swap" type="button" aria-label="Intercambiar origen y destino"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M4 1v12M1 10l3 3 3-3M10 13V1M7 4l3-3 3 3"/></svg></button></div>
+      <div class="q-field"><span class="label">Destino</span><span class="q-value">Granada</span></div>
+      <span class="q-coord">37.18°N<br />3.60°O</span>
+    </div>
+
+    <div class="dial-slot" id="slot"></div>
+
+    <div class="cmp-head"><span class="label">Ruta</span><span class="label">Tiempo</span><span class="label">Peor</span><span class="label">Alto</span></div>
+    <ol class="cmp" id="cmp"></ol>
+
+    <div class="readout plate" id="readout"></div>
+
+    <div class="legend" id="legend"></div>
+    <p class="note">Umbrales orientativos. «Tormenta con granizo» es un riesgo estimado, no una certeza. Consulta los avisos oficiales.</p>
+    <p class="attrib">© OpenStreetMap contributors · OpenFreeMap · Weather data by Open-Meteo.com (CC-BY 4.0) · Routing by OSRM · Avisos: AEMET / Meteoalarm · Prototipo con datos ficticios</p>
+  </aside>
+</main>
+
+<template id="dial-tpl">
+  <div class="dial plate">
+    <div class="dial-top"><span class="label">Hora de salida</span><button class="dial-now" type="button" data-now>Ahora</button></div>
+    <div class="dial-face" data-face tabindex="0" role="slider" aria-label="Hora de salida">
+      <svg data-svg></svg>
+      <div class="dial-fade"></div>
+      <div class="dial-read"><div class="dial-time" data-time></div><div class="dial-delta" data-delta></div></div>
+    </div>
+  </div>
+</template>
+
+<script src="shared.js"></script>
+<script>
+(() => {
+  const { routes, LEVELS, PICKER, summary, ranked, worstAt, levelAt, fmtTime, fmtDur, renderMap, sliderKeys, clampStep, icon, roadWindSVG } = RC;
+  const state = { min: PICKER.initial, sel: 'A' };
+  const desktop = matchMedia('(min-width: 900px)').matches;
+  const map = renderMap(document.getElementById('map'), {
+    gratStep: 0.1, labelEvery: 2, chevrons: true,
+    pad: (w, h) => (w >= 900 ? [80, 96, 260, 500] : [44, 56, 36, 64]),
+  });
+  document.getElementById('map').addEventListener('click', (e) => { const b = e.target.closest('.route-badge'); if (b) { state.sel = b.dataset.route; render(); } });
+  RC.themeToggle(document.getElementById('theme'));
+
+  let $cmp = null;
+  // ---------- Dial ----------
+  const host = desktop ? document.getElementById('dock') : document.getElementById('slot');
+  host.appendChild(document.getElementById('dial-tpl').content.cloneNode(true));
+  const face = host.querySelector('[data-face]');
+  const svg = host.querySelector('[data-svg]');
+  const DEG = 0.5; // grados por minuto → 30° por hora
+  const NS = 'http://www.w3.org/2000/svg';
+  let geo;
+  const pt = (cx, cy, r, a) => [cx + r * Math.sin((a * Math.PI) / 180), cy - r * Math.cos((a * Math.PI) / 180)];
+  const arc = (cx, cy, r, a0, a1) => { const [x0, y0] = pt(cx, cy, r, a0); const [x1, y1] = pt(cx, cy, r, a1); return `M${x0},${y0}A${r},${r} 0 0 1 ${x1},${y1}`; };
+
+  function build() {
+    const w = face.clientWidth, h = face.clientHeight;
+    const R = Math.max(150, w * 0.62);
+    const cx = w / 2, cy = 40 + R;
+    geo = { w, h, R, cx, cy };
+    svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+    let out = '<defs>' + [1, 2, 3].map((l) => `<pattern id="dp-${l}" width="4" height="4" patternUnits="userSpaceOnUse" ${l > 1 ? 'patternTransform="rotate(45)"' : ''}>${l === 1 ? '<circle cx="2" cy="2" r="0.8" fill="var(--pat)"/>' : '<rect width="1.4" height="4" fill="var(--pat)"/>'}${l === 3 ? '<rect width="4" height="1.4" fill="var(--pat)"/>' : ''}</pattern>`).join('') + '</defs>';
+    out += '<g class="dial-rot" data-rot>';
+    routes.forEach((r, i) => {
+      const rr = R - 14 - i * 9;
+      out += `<g class="d-band-g" data-route="${r.id}">`;
+      for (let m = PICKER.min - (PICKER.min % 60); m <= PICKER.max; m += 60) {
+        const a0 = (Math.max(m, PICKER.min) - PICKER.min) * DEG + 0.4, a1 = (Math.min(m + 60, PICKER.max + 10) - PICKER.min) * DEG - 0.4;
+        const lv = worstAt(r, m);
+        out += `<path class="d-band" d="${arc(cx, cy, rr, a0, a1)}" stroke="var(--r${lv})"/>`;
+        if (lv) out += `<path class="d-band" d="${arc(cx, cy, rr, a0, a1)}" stroke="url(#dp-${lv})"/>`;
+      }
+      out += '</g>';
+    });
+    for (let m = PICKER.min; m <= PICKER.max; m += 10) {
+      const a = (m - PICKER.min) * DEG, major = m % 60 === 0, half = m % 30 === 0;
+      const [x0, y0] = pt(cx, cy, R, a), [x1, y1] = pt(cx, cy, R + (major ? 14 : half ? 9 : 5), a);
+      out += `<line class="${major ? 'd-major' : 'd-minor'}" x1="${x0}" y1="${y0}" x2="${x1}" y2="${y1}"/>`;
+      if (major) { const [lx, ly] = pt(cx, cy, R + 26, a); out += `<text class="d-label" x="${lx}" y="${ly + 4}" text-anchor="middle" transform="rotate(${a} ${lx} ${ly})">${fmtTime(m)}</text>`; }
+    }
+    const [nx, ny] = pt(cx, cy, R + 4, 0);
+    out += `<circle class="d-now" cx="${nx}" cy="${ny}" r="3"/><text class="d-now-label" x="${nx + 6}" y="${ny - 6}">AHORA</text>`;
+    out += '</g>';
+    // Llaves A/B/C fijas a la izquierda y aguja fija arriba
+    routes.forEach((r, i) => { const [kx, ky] = pt(cx, cy, R - 14 - i * 9, -Math.min(64, (w / 2 / R) * 57)); out += `<text class="d-key" data-k="${r.id}" x="${kx + 6}" y="${ky + 3}">${r.id}</text>`; });
+    out += `<line class="d-needle" x1="${cx}" y1="${cy - R + 34}" x2="${cx}" y2="${cy - R - 16}"/><path class="d-needle-head" d="M${cx - 6},${cy - R - 22}L${cx + 6},${cy - R - 22}L${cx},${cy - R - 13}Z"/>`;
+    svg.innerHTML = out;
+    place(false);
+    if (typeof render === "function" && $cmp) render();
+  }
+  const rot = () => svg.querySelector('[data-rot]');
+  function place(animate, raw) {
+    const g = rot();
+    g.classList.toggle('dragging', !animate);
+    const v = raw ?? state.min;
+    g.setAttribute('transform', `rotate(${-(v - PICKER.min) * DEG} ${geo.cx} ${geo.cy})`);
+  }
+  let drag = null;
+  const pxPerMin = () => (geo.R * DEG * Math.PI) / 180;
+  face.addEventListener('pointerdown', (e) => { drag = { x: e.clientX, min: state.min }; face.setPointerCapture(e.pointerId); });
+  face.addEventListener('pointermove', (e) => {
+    if (!drag) return;
+    const raw = Math.max(PICKER.min, Math.min(PICKER.max, drag.min - (e.clientX - drag.x) / pxPerMin()));
+    const v = clampStep(raw);
+    if (v !== state.min) { state.min = v; navigator.vibrate?.(4); render(); }
+    place(false, raw);
+  });
+  const end = () => { if (drag) { drag = null; place(true); } };
+  face.addEventListener('pointerup', end);
+  face.addEventListener('pointercancel', end);
+  face.addEventListener('keydown', (e) => sliderKeys(e, state.min, set));
+  face.addEventListener('wheel', (e) => { e.preventDefault(); set(state.min + Math.sign(e.deltaX || e.deltaY) * 10); }, { passive: false });
+  host.querySelector('[data-now]').addEventListener('click', () => set(PICKER.now));
+  function set(v) { state.min = clampStep(v); place(true); render(); }
+  new ResizeObserver(build).observe(face);
+
+  // ---------- Panel ----------
+  document.getElementById('legend').innerHTML = LEVELS.map((l) => `<span><i class="sw fill-r${l.id}"></i>${icon('l' + l.id)}${l.es}</span>`).join('');
+  $cmp = document.getElementById('cmp');
+  const $read = document.getElementById('readout');
+
+  function render() {
+    const delta = state.min - PICKER.now;
+    host.querySelector('[data-time]').textContent = fmtTime(state.min);
+    host.querySelector('[data-delta]').textContent = delta === 0 ? 'AHORA' : `+${fmtDur(delta).replace(/^0 h /, '')}${delta < 60 ? ' MIN' : ''}`;
+    const sel = routes.find((r) => r.id === state.sel);
+    const ss = summary(sel, state.min);
+    face.setAttribute('aria-valuemin', PICKER.min); face.setAttribute('aria-valuemax', PICKER.max); face.setAttribute('aria-valuenow', state.min);
+    face.setAttribute('aria-valuetext', `Salida a las ${fmtTime(state.min)}. Ruta ${sel.id}: riesgo ${LEVELS[ss.worst].es.toLowerCase()}`);
+    host.querySelectorAll('.d-band-g').forEach((g) => g.classList.toggle('is-sel', g.dataset.route === state.sel));
+    host.querySelectorAll('[data-k]').forEach((k) => k.classList.toggle('is-sel', k.dataset.k === state.sel));
+
+    $cmp.innerHTML = ranked(state.min).map(({ r, s }) => `
+      <li class="cmp-row ${r.id === state.sel ? 'is-selected' : ''}">
+        <button class="cmp-btn" type="button" data-id="${r.id}" aria-pressed="${r.id === state.sel}">
+          <span class="cmp-name"><span class="cmp-id">${r.id}</span><span class="cmp-roads">${r.roads}</span></span>
+          <span class="cmp-num">${fmtDur(r.durMin)}</span>
+          <span class="cmp-risk"><i class="sw fill-r${s.worst}"></i>${LEVELS[s.worst].short}</span>
+          <span class="cmp-num">${s.kmHigh}<small> km</small></span>
+          <span class="cmp-sub">${r.via} · ${r.km} km · llegada ${s.arrival}</span>
+          <span class="profile" aria-hidden="true">${r.path.map((_, v) => `<i class="fill-r${levelAt(r, v, state.min)}"></i>`).join('')}</span>
+          <span class="cmp-worst">${s.worst ? `${s.worstTime} · ${s.worstText}` : 'Sin tramos con riesgo a esta hora'}</span>
+        </button>
+      </li>`).join('');
+
+    const rw = roadWindSVG(sel, ss.worst);
+    const isWind = sel.factor === 'crosswind';
+    $read.innerHTML = `<div><span class="label">${isWind ? 'Racha cruzada máx.' : 'Peor punto'} · ${ss.worstTime}</span>
+      <div class="big">${isWind ? `${rw.cross}<small>km/h</small>` : `${LEVELS[ss.worst].short}`}</div>
+      <p>${ss.worst ? `${ss.worstText}. ${sel.where}.` : 'Sin riesgo previsto a esta hora.'}${isWind ? ` Rumbo ${sel.wind.heading}°, viento del ${sel.wind.from}°.` : ''}</p></div>${rw.svg}`;
+    map.update(state.min, state.sel);
+  }
+  $cmp.addEventListener('click', (e) => { const b = e.target.closest('[data-id]'); if (b) { state.sel = b.dataset.id; render(); } });
+  render();
+})();
+</script>
+</body>
+</html>

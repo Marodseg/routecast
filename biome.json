@@ -167,6 +167,28 @@
           }
         }
       }
+    },
+    {
+      "includes": ["**/*.css"],
+      "linter": {
+        "rules": {
+          "complexity": {
+            "noImportantStyles": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["apps/web/src/ui/CommandSearch/CommandSearch.tsx"],
+      "linter": {
+        "rules": {
+          "a11y": {
+            "noNoninteractiveElementToInteractiveRole": "off",
+            "useFocusableInteractive": "off",
+            "useKeyWithClickEvents": "off"
+          }
+        }
+      }
     }
   ]
 }

@@ -3,7 +3,7 @@
 Compara rutas en coche según **el tiempo que hará en cada tramo a la hora en que pases tú**: lluvia fuerte, rachas,
 viento cruzado, riesgo de tormenta con granizo, nieve/hielo y niebla. Para decidir por dónde ir y cuándo salir.
 
-> **Estado:** en desarrollo — fase 0 (cimientos) del [ROADMAP](docs/ROADMAP.md). Aún no hay funcionalidad de usuario.
+> **Estado:** en desarrollo — fase 1 (sistema de diseño) del [ROADMAP](docs/ROADMAP.md). Galería de componentes en `/dev/gallery/`.
 
 Proyecto personal, sin monetización, con coste 0 €. Ámbito inicial: España.
 

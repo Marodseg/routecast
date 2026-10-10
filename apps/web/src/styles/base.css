@@ -1,0 +1,150 @@
+@layer reset, base, components, utilities;
+
+@layer reset {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+  body,
+  h1,
+  h2,
+  h3,
+  h4,
+  p,
+  figure,
+  blockquote,
+  dl,
+  dd,
+  ol,
+  ul {
+    margin: 0;
+  }
+  ol,
+  ul {
+    list-style: none;
+    padding: 0;
+  }
+  img,
+  svg {
+    display: block;
+    max-width: 100%;
+  }
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+    color: inherit;
+  }
+  button {
+    cursor: pointer;
+  }
+  :where(button, [role="button"], [role="slider"], a) {
+    touch-action: manipulation;
+  }
+}
+
+@layer base {
+  html {
+    background: var(--canvas);
+    color: var(--ink);
+  }
+  body {
+    min-height: 100dvh;
+    font-family: var(--font-text);
+    font-size: var(--text-md);
+    line-height: 1.45;
+    font-optical-sizing: auto;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    line-height: 1.1;
+    text-wrap: balance;
+  }
+  a {
+    color: var(--accent-ink);
+    text-underline-offset: 0.18em;
+  }
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  ::selection {
+    background: color-mix(in oklch, var(--accent) 30%, transparent);
+  }
+}
+
+@layer utilities {
+  .mono {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+  .label {
+    font: 500 var(--text-xs) / 1 var(--font-mono);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-subtle);
+  }
+  .visually-hidden {
+    position: absolute !important;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  /* Marcas de registro en las esquinas: el «chasis» del instrumento (ADR-0006). */
+  .plate {
+    --plate-mark: var(--ink-muted);
+    background:
+      linear-gradient(var(--plate-mark), var(--plate-mark)) top left / 9px 1px no-repeat,
+      linear-gradient(var(--plate-mark), var(--plate-mark)) top left / 1px 9px no-repeat,
+      linear-gradient(var(--plate-mark), var(--plate-mark)) top right / 9px 1px no-repeat,
+      linear-gradient(var(--plate-mark), var(--plate-mark)) top right / 1px 9px no-repeat,
+      linear-gradient(var(--plate-mark), var(--plate-mark)) bottom left / 9px 1px no-repeat,
+      linear-gradient(var(--plate-mark), var(--plate-mark)) bottom left / 1px 9px no-repeat,
+      linear-gradient(var(--plate-mark), var(--plate-mark)) bottom right / 9px 1px no-repeat,
+      linear-gradient(var(--plate-mark), var(--plate-mark)) bottom right / 1px 9px no-repeat;
+  }
+  /* Rellenos de riesgo: color + patrón (nunca solo color). */
+  .risk-fill-0 {
+    background: var(--risk-0);
+  }
+  .risk-fill-1 {
+    background:
+      radial-gradient(circle, var(--risk-pattern) 0.9px, transparent 1.3px) 0 0 / 4px 4px,
+      var(--risk-1);
+  }
+  .risk-fill-2 {
+    background: repeating-linear-gradient(45deg, var(--risk-pattern) 0 1.4px, transparent 1.4px 4px), var(--risk-2);
+  }
+  .risk-fill-3 {
+    background:
+      repeating-linear-gradient(45deg, var(--risk-pattern) 0 1.4px, transparent 1.4px 4px),
+      repeating-linear-gradient(-45deg, var(--risk-pattern) 0 1.4px, transparent 1.4px 4px), var(--risk-3);
+  }
+  .risk-fill-unknown {
+    background: repeating-linear-gradient(90deg, var(--rule-strong) 0 1px, transparent 1px 3px), var(--surface-sunken);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+}

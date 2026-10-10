@@ -1,0 +1,130 @@
+.skeleton {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.bone {
+  display: block;
+  background:
+    linear-gradient(90deg, transparent, color-mix(in oklch, var(--surface) 70%, transparent), transparent) -100% 0 / 60%
+    100% no-repeat,
+    var(--surface-sunken);
+  animation: sweep 1.4s var(--ease-in-out) infinite;
+}
+
+@keyframes sweep {
+  to {
+    background-position:
+      200% 0,
+      0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bone {
+    animation: none;
+  }
+}
+
+.empty {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-2);
+  padding: var(--space-6) var(--space-5);
+  background-color: var(--surface);
+}
+
+.emptyIcon {
+  color: var(--ink-muted);
+  margin-bottom: var(--space-1);
+}
+.empty[data-tone="warning"] .emptyIcon {
+  color: var(--danger);
+}
+.emptyTitle {
+  font-size: var(--text-xl);
+}
+.emptyBody {
+  color: var(--ink-muted);
+  max-width: 46ch;
+}
+
+.action {
+  margin-top: var(--space-2);
+  min-height: 40px;
+  padding: 0 var(--space-4);
+  border: 0;
+  border-radius: var(--radius-m);
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 600;
+}
+
+.action:hover {
+  background: color-mix(in oklch, var(--accent) 88%, var(--ink));
+}
+
+.toaster {
+  position: fixed;
+  z-index: var(--z-toast);
+  left: 50%;
+  bottom: calc(var(--space-4) + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  display: grid;
+  gap: var(--space-2);
+  width: min(440px, calc(100vw - 2 * var(--space-4)));
+  pointer-events: none;
+}
+
+.stack {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-2) var(--space-3) var(--space-4);
+  background: var(--ink);
+  color: var(--surface);
+  border-left: 4px solid var(--accent);
+  font-size: var(--text-sm);
+  pointer-events: auto;
+  animation: rise var(--duration) var(--ease-out);
+}
+
+.toast[data-tone="warning"] {
+  border-left-color: var(--risk-2);
+}
+.toast[data-tone="error"] {
+  border-left-color: var(--risk-3);
+}
+.toast > span {
+  flex: 1;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+.dismiss {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  border: 0;
+  background: none;
+  color: inherit;
+  border-radius: var(--radius-m);
+}
+
+.dismiss:hover {
+  background: color-mix(in oklch, var(--surface) 15%, transparent);
+}

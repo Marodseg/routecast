@@ -1,8 +1,14 @@
 [
   {
-    "name": "web: JS inicial (gzip)",
-    "path": "apps/web/dist/assets/*.js",
+    "name": "web: JS de la app (gzip, sin la galería)",
+    "path": ["apps/web/dist/assets/*.js", "!apps/web/dist/assets/gallery-*.js"],
     "limit": "350 KB",
+    "gzip": true
+  },
+  {
+    "name": "web: CSS de la app (gzip)",
+    "path": ["apps/web/dist/assets/*.css", "!apps/web/dist/assets/gallery-*.css"],
+    "limit": "40 KB",
     "gzip": true
   }
 ]

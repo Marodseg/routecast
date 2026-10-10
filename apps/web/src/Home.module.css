@@ -1,0 +1,78 @@
+.home {
+  min-height: 100dvh;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: var(--space-8);
+  padding: 0 var(--space-4) var(--space-6);
+  max-width: 880px;
+  margin: 0 auto;
+}
+
+.top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 56px;
+  border-bottom: 2px solid var(--ink);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font: 700 var(--text-sm) / 1 var(--font-display);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.mark {
+  width: 12px;
+  height: 12px;
+  background: var(--accent);
+  clip-path: polygon(0 100%, 50% 0, 100% 100%);
+}
+.tools {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.hero {
+  align-self: center;
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-8) var(--space-6);
+  background-color: var(--surface);
+}
+
+.title {
+  font-size: var(--text-4xl);
+  letter-spacing: -0.035em;
+}
+.tagline {
+  font: 500 var(--text-xl) / 1.3 var(--font-display);
+  max-width: 30ch;
+}
+.body {
+  color: var(--ink-muted);
+  max-width: 52ch;
+}
+
+.cta {
+  justify-self: start;
+  padding: var(--space-3) var(--space-4);
+  background: var(--accent);
+  color: var(--on-accent);
+  text-decoration: none;
+  font-weight: 600;
+  border-radius: var(--radius-m);
+}
+
+.cta:hover {
+  background: color-mix(in oklch, var(--accent) 88%, var(--ink));
+}
+.footer {
+  font: 400 var(--text-xs) / 1.6 var(--font-mono);
+  color: var(--ink-subtle);
+  border-top: 1px solid var(--rule);
+  padding-top: var(--space-3);
+}

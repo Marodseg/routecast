@@ -1,0 +1,444 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Routecast · Dirección A · Carta</title>
+<style>
+@font-face { font-family: 'Bricolage'; src: url(fonts/bricolage-grotesque-latin-standard-normal.woff2) format('woff2'); font-weight: 200 800; font-stretch: 75% 100%; font-display: swap; }
+@font-face { font-family: 'Instrument Sans'; src: url(fonts/instrument-sans-latin-wght-normal.woff2) format('woff2'); font-weight: 400 700; font-display: swap; }
+@font-face { font-family: 'JetBrains Mono'; src: url(fonts/jetbrains-mono-latin-wght-normal.woff2) format('woff2'); font-weight: 100 800; font-display: swap; }
+
+@layer tokens, base, layout, components;
+
+@layer tokens {
+  :root {
+    color-scheme: light;
+    --paper: oklch(0.965 0.014 84);
+    --paper-2: oklch(0.935 0.02 82);
+    --land: oklch(0.948 0.017 86);
+    --sea: oklch(0.905 0.022 215);
+    --ink: oklch(0.23 0.025 55);
+    --ink-2: oklch(0.42 0.022 60);
+    --ink-3: oklch(0.52 0.02 65);
+    --rule: oklch(0.23 0.025 55 / 0.16);
+    --rule-2: oklch(0.23 0.025 55 / 0.38);
+    --accent: oklch(0.76 0.155 68);
+    --on-accent: oklch(0.2 0.03 55);
+    --r0: oklch(0.7 0.045 235);
+    --r1: oklch(0.84 0.135 95);
+    --r2: oklch(0.64 0.19 35);
+    --r3: oklch(0.42 0.15 355);
+    --pat: oklch(0.2 0.03 55 / 0.55);
+    --font-display: 'Bricolage', 'Instrument Sans', sans-serif;
+    --font-text: 'Instrument Sans', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+    --radius-s: 2px; --radius-m: 6px; --radius-l: 14px;
+    --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+    --dur: 220ms;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+      color-scheme: dark;
+      --paper: oklch(0.2 0.012 60);
+      --paper-2: oklch(0.235 0.013 62);
+      --land: oklch(0.215 0.012 62);
+      --sea: oklch(0.175 0.02 232);
+      --ink: oklch(0.93 0.015 82);
+      --ink-2: oklch(0.76 0.016 78);
+      --ink-3: oklch(0.62 0.016 75);
+      --rule: oklch(0.93 0.015 82 / 0.13);
+      --rule-2: oklch(0.93 0.015 82 / 0.32);
+      --accent: oklch(0.8 0.15 70);
+      --r0: oklch(0.62 0.05 235);
+      --r1: oklch(0.84 0.13 95);
+      --r2: oklch(0.7 0.18 38);
+      --r3: oklch(0.63 0.17 350);
+      --pat: oklch(0.15 0.02 55 / 0.6);
+    }
+  }
+}
+
+@layer base {
+  *, *::before, *::after { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font: 400 15px/1.45 var(--font-text); }
+  button { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+  .label { font: 500 10.5px/1 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
+  .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+}
+
+@layer layout {
+  .app { min-height: 100dvh; display: grid; grid-template-rows: 46dvh auto; }
+  .map-wrap { position: relative; overflow: hidden; background: var(--land); border-bottom: 1px solid var(--rule-2); }
+  .sheet { position: relative; margin-top: -14px; background: var(--paper); border-top: 1px solid var(--rule-2); border-radius: var(--radius-l) var(--radius-l) 0 0; padding: 8px 16px calc(24px + env(safe-area-inset-bottom)); }
+  .grab { width: 36px; height: 4px; border-radius: 2px; background: var(--rule-2); margin: 0 auto 10px; }
+  .picker-dock { display: contents; }
+  @media (min-width: 900px) {
+    .app { grid-template-rows: none; grid-template-columns: 420px 1fr; height: 100dvh; }
+    .sheet { order: -1; margin: 0; border-radius: 0; border-top: 0; border-right: 1px solid var(--rule-2); overflow-y: auto; padding: 20px 28px 24px; }
+    .grab { display: none; }
+    .map-wrap { border: 0; }
+    .picker-dock { display: block; position: absolute; left: 50%; bottom: 20px; width: min(760px, calc(100% - 40px)); transform: translateX(-50%); }
+    .sheet .picker-slot { display: none; }
+  }
+}
+
+@layer components {
+  /* ---------- Cabecera ---------- */
+  .topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 14px; border-bottom: 1px solid var(--rule); }
+  .wordmark { display: flex; align-items: center; gap: 8px; font: 700 17px/1 var(--font-display); font-stretch: 85%; letter-spacing: -0.01em; }
+  .wordmark svg { width: 20px; height: 20px; }
+  .tools { display: flex; gap: 4px; }
+  .tool { height: 32px; min-width: 32px; padding: 0 8px; border: 1px solid var(--rule); border-radius: var(--radius-s); background: none; cursor: pointer; font: 500 12px/1 var(--font-mono); }
+  .tool:hover { border-color: var(--rule-2); }
+
+  /* ---------- Consulta ---------- */
+  .query { display: grid; grid-template-columns: 28px 1fr; align-items: baseline; padding: 18px 0 14px; row-gap: 2px; border-bottom: 1px solid var(--rule); }
+  .query .label { padding-top: 2px; }
+  .query .place { font: 600 clamp(28px, 7vw, 38px)/1.02 var(--font-display); font-variation-settings: 'opsz' 96; letter-spacing: -0.025em; text-wrap: balance; }
+  .query .place.to { color: var(--ink); }
+  .query .via { grid-column: 2; color: var(--ink-2); font-size: 13px; margin-top: 6px; }
+
+  /* ---------- DeparturePicker (cinta) ---------- */
+  .picker { background: var(--paper); border: 1px solid var(--rule-2); border-radius: var(--radius-m); padding: 12px 0 10px; }
+  .picker-dock .picker { box-shadow: 0 1px 0 var(--rule), 0 18px 40px -24px oklch(0.2 0.03 55 / 0.45); }
+  .sheet .picker { border-left: 0; border-right: 0; border-radius: 0; margin: 0 -16px; }
+  .picker-head { display: flex; align-items: baseline; gap: 12px; padding: 0 16px 8px; }
+  .picker-time { font: 600 30px/1 var(--font-mono); font-variant-numeric: tabular-nums; letter-spacing: -0.03em; }
+  .picker-delta { color: var(--ink-2); font-size: 13px; }
+  .picker-now { margin-left: auto; height: 28px; padding: 0 10px; border: 1px solid var(--rule-2); border-radius: var(--radius-s); background: none; font: 500 11px/1 var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; }
+  .picker-now:hover { background: var(--paper-2); }
+  .tape-wrap { display: grid; grid-template-columns: 28px 1fr; }
+  .tape-keys { display: grid; align-content: start; padding-top: 6px; row-gap: 2px; padding-left: 12px; }
+  .tape-keys span { height: 8px; font: 600 9px/8px var(--font-mono); color: var(--ink-3); }
+  .tape-keys span.is-sel { color: var(--ink); }
+  .tape { position: relative; height: 84px; overflow: hidden; cursor: grab; touch-action: pan-y; user-select: none; outline-offset: -2px; mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent); }
+  .tape:active { cursor: grabbing; }
+  .tape-track { position: absolute; inset: 0 auto 0 0; will-change: transform; }
+  .tape-track.animate { transition: transform var(--dur) var(--ease-out); }
+  .tape svg { display: block; overflow: visible; }
+  .t-minor { stroke: var(--rule-2); }
+  .t-major { stroke: var(--ink); }
+  .t-label { font: 500 11px var(--font-mono); fill: var(--ink-2); }
+  .t-label.half { fill: var(--ink-3); font-size: 9.5px; }
+  .band-label { font: 600 9.5px var(--font-mono); fill: var(--ink-3); }
+  .band-g { opacity: 0.38; transition: opacity var(--dur); }
+  .band-g.band-sel { opacity: 1; }
+  .band-sel .band-label { fill: var(--ink); }
+  .now-mark { fill: var(--accent); }
+  .now-label { font: 600 9.5px var(--font-mono); fill: var(--ink); text-transform: uppercase; letter-spacing: 0.08em; }
+  .needle { position: absolute; top: 0; bottom: 0; left: 50%; width: 0; pointer-events: none; }
+  .needle::before { content: ''; position: absolute; top: 0; bottom: 6px; left: -1px; width: 2px; background: var(--ink); }
+  .needle::after { content: ''; position: absolute; top: 0; left: -7px; border: 7px solid transparent; border-top: 9px solid var(--accent); border-bottom: 0; }
+  .picker-hint { padding: 6px 16px 0; color: var(--ink-3); font-size: 12px; }
+
+  /* ---------- Comparador ---------- */
+  .section-head { display: flex; justify-content: space-between; align-items: baseline; padding: 20px 0 8px; }
+  .routes { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--ink); }
+  .route-row { position: relative; border-bottom: 1px solid var(--rule); }
+  .route-btn { display: grid; grid-template-columns: 30px 1fr; column-gap: 12px; width: 100%; padding: 14px 0 14px; text-align: left; background: none; border: 0; cursor: pointer; }
+  .route-row.is-selected::before { content: ''; position: absolute; left: -16px; top: 0; bottom: 0; width: 3px; background: var(--ink); }
+  @media (min-width: 900px) { .route-row.is-selected::before { left: -28px; } }
+  .route-id { width: 28px; height: 28px; display: grid; place-items: center; border: 1px solid var(--ink); border-radius: var(--radius-s); font: 700 13px/1 var(--font-mono); }
+  .is-selected .route-id { background: var(--ink); color: var(--paper); }
+  .route-title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; }
+  .route-roads { font: 650 17px/1.2 var(--font-display); letter-spacing: -0.01em; }
+  .route-via { color: var(--ink-2); font-size: 13px; }
+  .readings { grid-column: 2; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px; }
+  .reading .label { display: block; margin-bottom: 5px; }
+  .reading-value { font: 600 16px/1 var(--font-mono); font-variant-numeric: tabular-nums; display: flex; align-items: center; gap: 6px; }
+  .reading-bar { height: 2px; background: var(--rule); margin-top: 7px; position: relative; }
+  .reading-bar > i { position: absolute; inset: 0 auto 0 0; background: var(--ink-2); transition: width var(--dur) var(--ease-out); }
+  .worst-line { grid-column: 2; margin-top: 10px; font-size: 13px; color: var(--ink-2); }
+  .worst-line b { color: var(--ink); font-weight: 600; }
+
+  /* ---------- Riesgo: chip con color + patrón + icono ---------- */
+  .chip { display: inline-flex; align-items: center; gap: 6px; }
+  .swatch { width: 16px; height: 16px; border-radius: var(--radius-s); border: 1px solid oklch(0.2 0.03 55 / 0.35); flex: none; }
+  .swatch.r0 { background: var(--r0); }
+  .swatch.r1 { background: radial-gradient(circle at 50% 50%, var(--pat) 1px, transparent 1.4px) 0 0 / 5px 5px, var(--r1); }
+  .swatch.r2 { background: repeating-linear-gradient(45deg, var(--pat) 0 1.5px, transparent 1.5px 4.5px), var(--r2); }
+  .swatch.r3 { background: repeating-linear-gradient(45deg, var(--pat) 0 1.5px, transparent 1.5px 4.5px), repeating-linear-gradient(-45deg, var(--pat) 0 1.5px, transparent 1.5px 4.5px), var(--r3); }
+  .ico { width: 16px; height: 16px; flex: none; }
+
+  /* ---------- Detalle + RoadWind ---------- */
+  .detail { display: grid; grid-template-columns: 112px 1fr; gap: 16px; align-items: center; padding: 18px 0; border-bottom: 1px solid var(--rule); }
+  .roadwind { width: 112px; height: 112px; }
+  .rw-ring { fill: none; stroke: var(--rule-2); }
+  .rw-tick { stroke: var(--ink-3); stroke-width: 1; }
+  .rw-n { font: 600 9px var(--font-mono); fill: var(--ink-2); }
+  .rw-road { stroke: var(--ink); stroke-width: 9; stroke-linecap: butt; }
+  .rw-road-center { stroke: var(--paper); stroke-width: 1.2; stroke-dasharray: 4 3; }
+  .rw-wind { stroke: var(--ink-2); stroke-width: 1.5; }
+  .rw-arrowhead { fill: var(--ink-2); }
+  .rw-cross { stroke: var(--r2); stroke-width: 4; stroke-linecap: round; }
+  .rw-cross-end { fill: var(--r2); }
+  .detail-big { font: 600 40px/1 var(--font-mono); letter-spacing: -0.04em; font-variant-numeric: tabular-nums; }
+  .detail-big small { font-size: 14px; letter-spacing: 0; color: var(--ink-2); margin-left: 4px; }
+  .detail p { margin: 6px 0 0; font-size: 13px; color: var(--ink-2); max-width: 34ch; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 16px; padding: 16px 0; font-size: 12.5px; }
+  .legend .chip svg { color: var(--ink-2); }
+  .honest { font-size: 12px; color: var(--ink-3); margin: 0 0 16px; max-width: 52ch; }
+  .attrib { font-size: 11px; color: var(--ink-3); border-top: 1px solid var(--rule); padding-top: 12px; }
+  .attrib a { color: inherit; }
+
+  /* ---------- Mapa (tamaños en px de pantalla vía --u) ---------- */
+  .map { position: absolute; inset: 0; width: 100%; height: 100%; display: block; --u: 1; }
+  .land { fill: var(--land); }
+  .sea { fill: var(--sea); }
+  .sea-hatch { fill: url(#sea-lines); }
+  .sea-lines line { stroke: var(--rule); stroke-width: 1; }
+  .coast { fill: none; stroke: var(--ink-2); stroke-width: calc(var(--u) * 1.2px); }
+  .contour { fill: none; stroke: oklch(from var(--ink) l c h / 0.11); stroke-width: calc(var(--u) * 1px); }
+  .contour-top { stroke: oklch(from var(--ink) l c h / 0.2); }
+  .grat { stroke: oklch(from var(--ink) l c h / 0.06); stroke-width: calc(var(--u) * 1px); }
+  .grat-major { stroke: oklch(from var(--ink) l c h / 0.14); }
+  .grat-label { font: 500 calc(var(--u) * 10px) var(--font-mono); fill: var(--ink-3); }
+  .place { font: italic 500 calc(var(--u) * 13px) var(--font-text); fill: var(--ink-2); paint-order: stroke; stroke: var(--land); stroke-width: calc(var(--u) * 4px); stroke-linejoin: round; }
+  .place.rank-1 { font: 700 calc(var(--u) * 14px) var(--font-display); fill: var(--ink); letter-spacing: 0.04em; text-transform: uppercase; }
+  .place-dot { fill: var(--paper); stroke: var(--ink); stroke-width: calc(var(--u) * 1.5px); }
+  .place-dot.rank-1 { fill: var(--ink); }
+  .route-reveal { fill: none; stroke: #fff; stroke-width: calc(var(--u) * 60px); stroke-dasharray: 1 1; stroke-dashoffset: 1; animation: reveal 1100ms var(--ease-out) 150ms forwards; }
+  .route:nth-child(2) .route-reveal { animation-delay: 250ms; }
+  @keyframes reveal { to { stroke-dashoffset: 0; } }
+  .route-casing { fill: none; stroke: var(--land); stroke-width: calc(var(--u) * 7px); stroke-linejoin: round; stroke-linecap: round; }
+  .seg, .seg-pattern { fill: none; stroke-width: calc(var(--u) * 2.5px); stroke-linecap: round; transition: stroke var(--dur); }
+  .seg-pattern { opacity: 0; }
+  .route:not(.is-selected) .seg { stroke: var(--ink-2) !important; stroke-dasharray: calc(var(--u) * 1px) calc(var(--u) * 5px); }
+  .is-selected .route-casing { stroke: var(--ink); stroke-width: calc(var(--u) * 13px); }
+  .is-selected .seg, .is-selected .seg-pattern { stroke-width: calc(var(--u) * 9px); stroke-linecap: butt; }
+  .is-selected .seg-pattern { opacity: 1; }
+  .seg.r0 { stroke: var(--r0); } .seg.r1 { stroke: var(--r1); } .seg.r2 { stroke: var(--r2); } .seg.r3 { stroke: var(--r3); }
+  .pat-ink { fill: var(--pat); }
+  .tick { stroke: var(--ink); stroke-width: 1.2; }
+  .tick-label { font: 600 calc(var(--u) * 10.5px) var(--font-mono); fill: var(--ink); paint-order: stroke; stroke: var(--land); stroke-width: calc(var(--u) * 3.5px); stroke-linejoin: round; }
+  .route-badge { cursor: pointer; }
+  .route-badge-box { fill: var(--paper); stroke: var(--ink); stroke-width: 1.2; rx: 2px; }
+  .route-badge-text { font: 700 11px var(--font-mono); fill: var(--ink); }
+  .route-badge.is-selected .route-badge-box { fill: var(--ink); }
+  .route-badge.is-selected .route-badge-text { fill: var(--paper); }
+  .map-overlay { position: absolute; top: 12px; left: 12px; right: 12px; display: flex; justify-content: space-between; pointer-events: none; }
+  .scale { font: 500 10px var(--font-mono); color: var(--ink-2); background: oklch(from var(--paper) l c h / 0.88); padding: 6px 8px; border: 1px solid var(--rule); border-radius: var(--radius-s); }
+  .scale-bar { display: flex; margin-top: 4px; height: 5px; width: 100px; border: 1px solid var(--ink-2); }
+  .scale-bar i { flex: 1; } .scale-bar i:nth-child(odd) { background: var(--ink-2); }
+  .north { width: 34px; height: 34px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition-duration: 1ms !important; animation-duration: 1ms !important; animation-delay: 0ms !important; }
+  }
+}
+</style>
+</head>
+<body>
+<main class="app">
+  <h1 class="visually-hidden">Routecast: rutas de Málaga a Granada</h1>
+  <div class="map-wrap">
+    <svg class="map" id="map" aria-label="Mapa: tres rutas de Málaga a Granada coloreadas por riesgo" role="img">
+      <defs>
+        <pattern id="sea-lines" class="sea-lines" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(-20)"><line x1="0" y1="4" x2="8" y2="4"/></pattern>
+      </defs>
+    </svg>
+    <div class="map-overlay">
+      <div class="scale">0 — 10 — 20 km<div class="scale-bar"><i></i><i></i><i></i><i></i></div></div>
+      <svg class="north" viewBox="0 0 34 34" aria-label="Norte arriba" role="img"><circle cx="17" cy="17" r="15.5" fill="var(--paper)" stroke="var(--rule-2)"/><path d="M17 5l5 14h-10z" fill="var(--ink)"/><path d="M17 29l-5-10h10z" fill="none" stroke="var(--ink)"/><text x="17" y="31.5" text-anchor="middle" font-size="0">N</text></svg>
+    </div>
+    <div class="picker-dock" id="dock"></div>
+  </div>
+
+  <aside class="sheet" aria-label="Rutas y riesgo">
+    <div class="grab" aria-hidden="true"></div>
+    <header class="topbar">
+      <div class="wordmark">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="10" cy="10" r="8.2"/><path d="M10 1.8v3M10 15.2v3M1.8 10h3M15.2 10h3"/><path d="M6 14l4-9 4 9" stroke-linejoin="round"/></svg>
+        Routecast
+      </div>
+      <div class="tools"><button class="tool" type="button" aria-label="Cambiar idioma a inglés">EN</button><button class="tool" type="button" id="theme" aria-label="Cambiar tema">◐</button></div>
+    </header>
+
+    <div class="query">
+      <span class="label">De</span><span class="place">Málaga</span>
+      <span class="label">A</span><span class="place to">Granada</span>
+      <span class="via">Vie 10 oct · 3 rutas en coche · previsión Open-Meteo de las 15:30</span>
+    </div>
+
+    <div class="picker-slot" id="slot"></div>
+
+    <div class="section-head"><span class="label">Rutas · menos riesgo primero</span><span class="label" id="dep-label"></span></div>
+    <ol class="routes" id="routes"></ol>
+
+    <div class="detail" id="detail"></div>
+
+    <div class="legend" id="legend"></div>
+    <p class="honest">Umbrales orientativos. «Tormenta con granizo» indica riesgo estimado, no certeza. Comprueba los avisos oficiales antes de salir.</p>
+    <p class="attrib">© OpenStreetMap contributors · OpenFreeMap · Weather data by Open-Meteo.com (CC-BY 4.0) · Routing by OSRM · Avisos: AEMET / Meteoalarm. Prototipo con datos ficticios.</p>
+  </aside>
+</main>
+
+<template id="picker-tpl">
+  <div class="picker">
+    <div class="picker-head">
+      <span class="label">Salida</span>
+      <span class="picker-time" data-time></span>
+      <span class="picker-delta" data-delta></span>
+      <button class="picker-now" type="button" data-now>Ahora</button>
+    </div>
+    <div class="tape-wrap">
+      <div class="tape-keys" aria-hidden="true" data-keys></div>
+      <div class="tape" data-tape tabindex="0" role="slider" aria-label="Hora de salida">
+        <div class="tape-track" data-track></div>
+        <div class="needle"></div>
+      </div>
+    </div>
+    <div class="picker-hint">Arrastra la cinta o usa ← → (10 min) y Re Pág / Av Pág (1 h).</div>
+  </div>
+</template>
+
+<script src="shared.js"></script>
+<script>
+(() => {
+  const { routes, LEVELS, PICKER, summary, ranked, worstAt, fmtTime, fmtDur, renderMap, sliderKeys, clampStep, icon, roadWindSVG, FACTORS } = RC;
+  const state = { min: PICKER.initial, sel: 'A' };
+  const map = renderMap(document.getElementById('map'), {
+    gratStep: 0.1,
+    labelEvery: 2,
+    pad: () => (innerWidth >= 900 ? [72, 96, 270, 96] : [60, 56, 40, 64]),
+  });
+  document.getElementById('map').addEventListener('click', (e) => { const b = e.target.closest('.route-badge'); if (b) { state.sel = b.dataset.route; render(); } });
+
+  // ---------- Picker (cinta) ----------
+  const PX = 2.6; // px por minuto
+  const host = matchMedia('(min-width: 900px)').matches ? document.getElementById('dock') : document.getElementById('slot');
+  host.appendChild(document.getElementById('picker-tpl').content.cloneNode(true));
+  const tape = host.querySelector('[data-tape]');
+  const track = host.querySelector('[data-track]');
+  const span = (PICKER.max - PICKER.min) * PX;
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('width', span + 2);
+  svg.setAttribute('height', 84);
+  const bandsTop = 6, bandH = 8, bandGap = 2;
+  const bandRects = {};
+  routes.forEach((r, i) => {
+    const g = document.createElementNS(NS, 'g');
+    g.setAttribute('class', 'band-g');
+    g.dataset.route = r.id;
+    const y = bandsTop + i * (bandH + bandGap);
+    bandRects[r.id] = [];
+    for (let m = PICKER.min - (PICKER.min % 60); m <= PICKER.max; m += 60) {
+      const x0 = Math.max(0, (m - PICKER.min) * PX);
+      const x1 = Math.min(span, (m + 60 - PICKER.min) * PX);
+      const lv = worstAt(r, m);
+      const rect = document.createElementNS(NS, 'rect');
+      Object.entries({ x: x0 + 0.5, y, width: Math.max(0, x1 - x0 - 1), height: bandH, class: 'band', fill: `var(--r${lv})` }).forEach(([k, v]) => rect.setAttribute(k, v));
+      g.appendChild(rect);
+      if (lv >= 1) {
+        const pr = rect.cloneNode();
+        pr.setAttribute('fill', `url(#tape-pat-${lv})`);
+        g.appendChild(pr);
+      }
+    }
+    svg.appendChild(g);
+  });
+  // patrones locales de la cinta
+  svg.insertAdjacentHTML('afterbegin', `<defs>
+    <pattern id="tape-pat-1" width="5" height="5" patternUnits="userSpaceOnUse"><circle cx="2.5" cy="2.5" r="0.9" fill="var(--pat)"/></pattern>
+    <pattern id="tape-pat-2" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="1.6" height="5" fill="var(--pat)"/></pattern>
+    <pattern id="tape-pat-3" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="1.6" height="5" fill="var(--pat)"/><rect width="5" height="1.6" fill="var(--pat)"/></pattern></defs>`);
+  const ticksY = bandsTop + 3 * (bandH + bandGap) + 4;
+  for (let m = PICKER.min; m <= PICKER.max; m += 10) {
+    const x = (m - PICKER.min) * PX;
+    const major = m % 60 === 0, half = m % 30 === 0;
+    const l = document.createElementNS(NS, 'line');
+    Object.entries({ x1: x, x2: x, y1: ticksY, y2: ticksY + (major ? 16 : half ? 10 : 6), class: major ? 't-major' : 't-minor' }).forEach(([k, v]) => l.setAttribute(k, v));
+    svg.appendChild(l);
+    if (major || half) {
+      const t = document.createElementNS(NS, 'text');
+      t.setAttribute('x', x); t.setAttribute('y', ticksY + 30); t.setAttribute('text-anchor', 'middle');
+      t.setAttribute('class', major ? 't-label' : 't-label half');
+      t.textContent = major ? fmtTime(m) : ':30';
+      svg.appendChild(t);
+    }
+  }
+  svg.insertAdjacentHTML('beforeend', `<rect class="now-mark" x="-1" y="${ticksY}" width="3" height="18" /><text class="now-label" x="6" y="${ticksY + 12}">ahora</text>`);
+  track.appendChild(svg);
+
+  host.querySelector('[data-keys]').innerHTML = routes.map((r) => `<span data-k="${r.id}">${r.id}</span>`).join('');
+  const tapeW = () => tape.clientWidth;
+  function placeTrack(animate) {
+    track.classList.toggle('animate', !!animate);
+    track.style.transform = `translateX(${tapeW() / 2 - (state.min - PICKER.min) * PX}px)`;
+  }
+
+  let drag = null;
+  tape.addEventListener('pointerdown', (e) => { drag = { x: e.clientX, min: state.min }; tape.setPointerCapture(e.pointerId); });
+  tape.addEventListener('pointermove', (e) => {
+    if (!drag) return;
+    const v = clampStep(drag.min - (e.clientX - drag.x) / PX);
+    if (v !== state.min) { state.min = v; navigator.vibrate?.(4); render(); }
+    track.classList.remove('animate');
+    const raw = Math.max(PICKER.min, Math.min(PICKER.max, drag.min - (e.clientX - drag.x) / PX));
+    track.style.transform = `translateX(${tapeW() / 2 - (raw - PICKER.min) * PX}px)`;
+  });
+  const end = () => { if (drag) { drag = null; placeTrack(true); } };
+  tape.addEventListener('pointerup', end);
+  tape.addEventListener('pointercancel', end);
+  tape.addEventListener('wheel', (e) => { e.preventDefault(); set(state.min + Math.sign(e.deltaX || e.deltaY) * 10); }, { passive: false });
+  tape.addEventListener('keydown', (e) => sliderKeys(e, state.min, set));
+  host.querySelector('[data-now]').addEventListener('click', () => set(PICKER.now));
+  addEventListener('resize', () => placeTrack(false));
+  function set(v) { state.min = clampStep(v); placeTrack(true); render(); }
+
+  // ---------- Paneles ----------
+  const $routes = document.getElementById('routes');
+  const $detail = document.getElementById('detail');
+  document.getElementById('legend').innerHTML = LEVELS.map((l) => `<span class="chip"><span class="swatch r${l.id}"></span>${icon('l' + l.id)}${l.es}</span>`).join('');
+
+  function render() {
+    const delta = state.min - PICKER.now;
+    host.querySelector('[data-time]').textContent = fmtTime(state.min);
+    host.querySelector('[data-delta]').textContent = delta === 0 ? 'ahora mismo' : `dentro de ${fmtDur(delta).replace(/^0 h /, '')}${delta < 60 ? ' min' : ''}`;
+    const sel = routes.find((r) => r.id === state.sel);
+    const ss = summary(sel, state.min);
+    tape.setAttribute('aria-valuemin', PICKER.min); tape.setAttribute('aria-valuemax', PICKER.max); tape.setAttribute('aria-valuenow', state.min);
+    tape.setAttribute('aria-valuetext', `Salida a las ${fmtTime(state.min)}. Ruta ${sel.id}: riesgo ${LEVELS[ss.worst].es.toLowerCase()}`);
+    host.querySelectorAll('.band-g').forEach((g) => g.classList.toggle('band-sel', g.dataset.route === state.sel));
+    host.querySelectorAll('[data-k]').forEach((k) => k.classList.toggle('is-sel', k.dataset.k === state.sel));
+    document.getElementById('dep-label').textContent = `salida ${fmtTime(state.min)}`;
+
+    const list = ranked(state.min);
+    const maxDur = Math.max(...routes.map((r) => r.durMin));
+    const maxKm = Math.max(1, ...list.map((x) => x.s.kmHigh));
+    $routes.innerHTML = list.map(({ r, s }) => `
+      <li class="route-row ${r.id === state.sel ? 'is-selected' : ''}">
+        <button class="route-btn" type="button" data-id="${r.id}" aria-pressed="${r.id === state.sel}">
+          <span class="route-id">${r.id}</span>
+          <span class="route-title"><span class="route-roads">${r.roads}</span><span class="route-via">${r.via} · ${r.km} km · llegada ${s.arrival}</span></span>
+          <span class="readings">
+            <span class="reading"><span class="label">Duración</span><span class="reading-value">${fmtDur(r.durMin)}</span><span class="reading-bar"><i style="width:${(r.durMin / maxDur) * 100}%"></i></span></span>
+            <span class="reading"><span class="label">Peor tramo</span><span class="reading-value chip"><span class="swatch r${s.worst}"></span>${LEVELS[s.worst].short}</span><span class="reading-bar"><i style="width:${((s.worst + 0.15) / 3.15) * 100}%"></i></span></span>
+            <span class="reading"><span class="label">Riesgo alto</span><span class="reading-value">${s.kmHigh} km</span><span class="reading-bar"><i style="width:${(s.kmHigh / maxKm) * 100}%"></i></span></span>
+          </span>
+          <span class="worst-line">${s.worst ? `<b>${s.worstTime}</b> · ${s.worstText} · ${r.where}` : 'Sin tramos con riesgo a esta hora.'}</span>
+        </button>
+      </li>`).join('');
+
+    const rw = roadWindSVG(sel, ss.worst);
+    $detail.innerHTML = sel.factor === 'crosswind'
+      ? `${rw.svg}<div><span class="label">Ruta ${sel.id} · peor punto · ${ss.worstTime}</span><div class="detail-big">${rw.cross}<small>km/h cruzado</small></div><p>La A-92 va hacia el noreste (${sel.wind.heading}°) y el viento entra del oeste (${sel.wind.from}°): de ${rw.gust} km/h de racha, ${rw.cross} empujan de lado.</p></div>`
+      : `${rw.svg}<div><span class="label">Ruta ${sel.id} · peor punto · ${ss.worstTime}</span><div class="detail-big">${ss.worst ? FACTORS[sel.factor].es : 'Calma'}</div><p>${ss.worst ? `${ss.worstText} en ${sel.where}.` : 'Sin riesgo previsto a esta hora.'} Viento cruzado máximo ${rw.cross} km/h.</p></div>`;
+    map.update(state.min, state.sel);
+  }
+  $routes.addEventListener('click', (e) => { const b = e.target.closest('[data-id]'); if (b) { state.sel = b.dataset.id; render(); } });
+
+  RC.themeToggle(document.getElementById('theme'));
+
+  render();
+  requestAnimationFrame(() => placeTrack(false));
+})();
+</script>
+</body>
+</html>

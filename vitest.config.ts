@@ -7,7 +7,7 @@ export default defineConfig({
       { test: { name: 'core', root: 'packages/core', include: ['test/**/*.test.ts'] } },
       { test: { name: 'providers', root: 'packages/providers', include: ['test/**/*.test.ts'] } },
       { test: { name: 'worker', root: 'apps/worker', include: ['test/**/*.test.ts'] } },
-      { test: { name: 'web', root: 'apps/web', include: ['src/**/*.test.ts'] } },
+      'apps/web/vitest.config.ts',
     ],
     coverage: {
       provider: 'v8',
