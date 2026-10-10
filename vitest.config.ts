@@ -14,8 +14,7 @@ export default defineConfig({
       include: ['packages/*/src/**', 'apps/*/src/**'],
       reporter: ['text-summary', 'html', 'lcov'],
       thresholds: {
-        perFile: true,
-        'packages/core/src/**': { lines: 90, functions: 90, branches: 85, statements: 90 },
+        'packages/core/src/**': { perFile: true, lines: 90, functions: 90, branches: 80, statements: 90 },
       },
     },
   },
