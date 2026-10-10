@@ -48,26 +48,37 @@ export function CommandSearch(props: CommandSearchProps) {
   let input!: HTMLInputElement;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let ctrl: AbortController | undefined;
+  let blurTimer: ReturnType<typeof setTimeout> | undefined;
+  /** Hay un lugar elegido cuyo nombre está en el campo; editar el texto lo invalida. */
+  let hasSelection = !!props.value;
+
+  /** Cancela búsqueda pendiente o en vuelo para que no pise el estado después. */
+  const cancel = () => {
+    clearTimeout(timer);
+    ctrl?.abort();
+    ctrl = undefined;
+    setResults([]);
+    setStatus('idle');
+  };
 
   createEffect(
     on(
       () => props.value,
-      (v) => setQuery(v?.name ?? ''),
+      (v) => {
+        hasSelection = !!v;
+        setQuery(v?.name ?? '');
+      },
       { defer: true },
     ),
   );
 
+  const optionId = (i: number) => `${uid}-opt-${i}`;
   const showingRecent = () => query().trim().length < 2;
   const options = () => (showingRecent() ? (props.recent ?? []) : results());
 
   const run = (q: string) => {
-    clearTimeout(timer);
-    ctrl?.abort();
-    if (q.trim().length < 2) {
-      setStatus('idle');
-      setResults([]);
-      return;
-    }
+    cancel();
+    if (q.trim().length < 2) return;
     setStatus('loading');
     timer = setTimeout(
       async () => {
@@ -88,11 +99,19 @@ export function CommandSearch(props: CommandSearchProps) {
     );
   };
   onCleanup(() => {
-    clearTimeout(timer);
-    ctrl?.abort();
+    cancel();
+    clearTimeout(blurTimer);
+  });
+
+  // La opción activa siempre visible al navegar con flechas.
+  createEffect(() => {
+    const i = active();
+    if (i >= 0) document.getElementById(optionId(i))?.scrollIntoView?.({ block: 'nearest' });
   });
 
   const choose = (place: Place) => {
+    cancel();
+    hasSelection = true;
     setQuery(place.name);
     setOpen(false);
     setActive(-1);
@@ -125,6 +144,8 @@ export function CommandSearch(props: CommandSearchProps) {
           e.preventDefault();
           setOpen(false);
         } else if (query()) {
+          cancel();
+          hasSelection = false;
           setQuery('');
           props.onSelect(null);
         }
@@ -133,7 +154,6 @@ export function CommandSearch(props: CommandSearchProps) {
     }
   };
 
-  const optionId = (i: number) => `${uid}-opt-${i}`;
   const expanded = () => open() && (options().length > 0 || status() !== 'idle');
 
   return (
@@ -160,12 +180,22 @@ export function CommandSearch(props: CommandSearchProps) {
           value={query()}
           onInput={(e) => {
             setQuery(e.currentTarget.value);
+            if (hasSelection) {
+              hasSelection = false;
+              props.onSelect(null);
+            }
             setOpen(true);
             setActive(-1);
             run(e.currentTarget.value);
           }}
-          onFocus={() => setOpen(true)}
-          onBlur={() => setTimeout(() => setOpen(false), 120)}
+          onFocus={() => {
+            clearTimeout(blurTimer);
+            setOpen(true);
+          }}
+          onBlur={() => {
+            clearTimeout(blurTimer);
+            blurTimer = setTimeout(() => setOpen(false), 120);
+          }}
           onKeyDown={onKeyDown}
         />
         <Show when={query()}>
@@ -174,9 +204,9 @@ export function CommandSearch(props: CommandSearchProps) {
             class={s.clear}
             aria-label={t().search.clear}
             onClick={() => {
+              cancel();
+              hasSelection = false;
               setQuery('');
-              setResults([]);
-              setStatus('idle');
               props.onSelect(null);
               input.focus();
             }}

@@ -60,11 +60,11 @@ export function RouteCompare(props: RouteCompareProps) {
                 </span>
                 <span class={s.num}>
                   {r.kmHigh}
-                  <small> km</small>
+                  <small> {t().units.km}</small>
                   <span class="visually-hidden">{t().compare.kmHigh(r.kmHigh)}</span>
                 </span>
                 <span class={s.sub}>
-                  {r.via} · {r.distanceKm} km · {t().compare.arrival(r.arrival)}
+                  {r.via} · {r.distanceKm} {t().units.km} · {t().compare.arrival(r.arrival)}
                 </span>
                 <span class={s.profile}>
                   <RiskProfile segments={r.profile} totalKm={r.distanceKm} routeId={r.id} variant="mini" />

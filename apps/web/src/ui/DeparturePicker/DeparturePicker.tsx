@@ -145,7 +145,7 @@ export function DeparturePicker(props: DeparturePickerProps) {
   const onPointerDown = (e: PointerEvent) => {
     if (props.disabled || e.button !== 0) return;
     cancelAnimationFrame(raf);
-    face.setPointerCapture(e.pointerId);
+    face.setPointerCapture?.(e.pointerId);
     start = { x: e.clientX, value: shown() };
     last = { x: e.clientX, t: e.timeStamp, v: 0 };
     setDragging(true);
@@ -210,9 +210,12 @@ export function DeparturePicker(props: DeparturePickerProps) {
 
   const onWheel = (e: WheelEvent) => {
     if (props.disabled) return;
-    const d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+    // Solo desplazamiento horizontal (trackpad o Mayús+rueda): el vertical sigue desplazando la página.
+    const d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.shiftKey ? e.deltaY : 0;
     if (d === 0) return;
     e.preventDefault();
+    cancelAnimationFrame(raf);
+    setRaw(null);
     commit(props.value + Math.sign(d) * step());
   };
 

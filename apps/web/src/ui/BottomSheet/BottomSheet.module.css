@@ -57,6 +57,6 @@
   padding: 0 var(--space-4) calc(var(--space-6) + env(safe-area-inset-bottom));
 }
 
-.sheet:not([data-snap="full"]) .content {
+.sheet[data-snap="peek"] .content {
   overflow: hidden;
 }

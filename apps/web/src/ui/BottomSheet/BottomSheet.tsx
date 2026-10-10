@@ -24,6 +24,7 @@ const TOP_GAP = 48;
  */
 export function BottomSheet(props: BottomSheetProps) {
   let root!: HTMLDivElement;
+  let content!: HTMLDivElement;
   const [containerH, setContainerH] = createSignal(640);
   const [dragOffset, setDragOffset] = createSignal<number | null>(null);
 
@@ -53,6 +54,19 @@ export function BottomSheet(props: BottomSheetProps) {
     });
   });
 
+  // En «peek» el contenido está fuera de pantalla: ni foco ni lector de pantalla.
+  createEffect(() => content.toggleAttribute('inert', props.snap === 'peek'));
+
+  // Escape pliega la hoja completa (el fondo está inert y el asa no debería ser la única salida).
+  createEffect(() => {
+    if (props.snap !== 'full') return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') props.onSnap('half');
+    };
+    document.addEventListener('keydown', onKey);
+    onCleanup(() => document.removeEventListener('keydown', onKey));
+  });
+
   // --- Arrastre del asa ---
   let start = { y: 0, offset: 0, t: 0 };
   let lastY = 0;
@@ -62,7 +76,7 @@ export function BottomSheet(props: BottomSheetProps) {
 
   const onPointerDown = (e: PointerEvent) => {
     if (e.button !== 0) return;
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
     start = { y: e.clientY, offset: offset(), t: e.timeStamp };
     lastY = e.clientY;
     lastT = e.timeStamp;
@@ -81,7 +95,8 @@ export function BottomSheet(props: BottomSheetProps) {
     if (next > max) next = max + (next - max) / 3;
     setDragOffset(next);
     const dt = Math.max(1, e.timeStamp - lastT);
-    velocity = 0.7 * ((e.clientY - lastY) / dt) + 0.3 * velocity;
+    // Si el dedo estuvo quieto, la velocidad previa ya no cuenta.
+    velocity = dt > 100 ? 0 : 0.7 * ((e.clientY - lastY) / dt) + 0.3 * velocity;
     lastY = e.clientY;
     lastT = e.timeStamp;
   };
@@ -90,6 +105,7 @@ export function BottomSheet(props: BottomSheetProps) {
     if (current === null) return;
     setDragOffset(null);
     if (!moved) return; // fue un clic: lo gestiona onClick
+    if (performance.now() - lastT > 100) velocity = 0;
     // Proyección con la velocidad (px/ms) para decidir anclaje, como un lanzamiento.
     const projected = current + velocity * 180;
     const nearest = ORDER.reduce((best, snap) =>
@@ -99,7 +115,11 @@ export function BottomSheet(props: BottomSheetProps) {
   };
 
   const cycle = () => {
-    if (moved) return;
+    // El clic que sigue a un arrastre se ignora una vez; Enter/Espacio después siempre funcionan.
+    if (moved) {
+      moved = false;
+      return;
+    }
     props.onSnap(props.snap === 'full' ? 'peek' : (ORDER[ORDER.indexOf(props.snap) + 1] ?? 'full'));
   };
 
@@ -133,7 +153,13 @@ export function BottomSheet(props: BottomSheetProps) {
       >
         <span class={s.grip} aria-hidden="true" />
       </button>
-      <div class={s.content}>{props.children}</div>
+      <div
+        class={s.content}
+        ref={content}
+        style={{ 'max-height': props.snap === 'full' ? undefined : `${Math.max(0, visible(props.snap) - 28)}px` }}
+      >
+        {props.children}
+      </div>
     </div>
   );
 }

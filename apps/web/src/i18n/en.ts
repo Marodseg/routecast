@@ -30,11 +30,12 @@ export const en: Dict = {
     now: 'Now',
     nowMark: 'now',
     later: (d) => `+${d}`,
-    hint: 'Drag the dial or use the arrow keys (10 min) and Page Up / Page Down (1 h).',
+    hint: 'Drag the dial or use the arrow keys (10 min), Page Up / Page Down (1 h), Home (now) and End (latest).',
     valueText: (time, route, level) => `Departing at ${time}. Route ${route}: ${level}.`,
   },
   roadwind: {
     title: 'Wind relative to the road',
+    north: 'N',
     summary: (heading, from, gust, cross) =>
       `Road heading ${heading}°, wind from ${from}°. Of ${gust} km/h gusts, ${cross} km/h push sideways.`,
     calm: 'Calm wind.',
@@ -55,6 +56,9 @@ export const en: Dict = {
   profile: {
     label: (route) => `Risk profile of route ${route}`,
     at: (km, level) => `km ${km}: ${level}`,
+    idle: 'Use the arrow keys to move along the route by kilometre.',
+    range: (from, to) => `km ${from}–${to}`,
+    high: (ranges) => `High or severe risk at ${ranges}.`,
   },
   search: {
     from: 'From',
@@ -100,6 +104,7 @@ export const en: Dict = {
   },
   theme: { label: 'Theme', system: 'System', light: 'Light', dark: 'Dark' },
   lang: { label: 'Language', switchTo: 'Cambiar a español', short: 'ES' },
+  units: { km: 'km', kmh: 'km/h' },
   confidence: { low: 'Forecast beyond 48 h: low confidence.' },
   attribution:
     '© OpenStreetMap contributors · OpenFreeMap · Weather data by Open-Meteo.com (CC-BY 4.0) · Routing by OSRM / OpenRouteService · Warnings: AEMET / Meteoalarm (EUMETNET)',

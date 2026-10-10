@@ -2,7 +2,7 @@
   display: inline-flex;
   margin: 0;
   padding: 0;
-  border: 1px solid var(--rule-strong);
+  border: 1px solid var(--control);
   border-radius: var(--radius-m);
 }
 
@@ -38,7 +38,7 @@
   min-width: 40px;
   height: 36px;
   padding: 0 var(--space-2);
-  border: 1px solid var(--rule-strong);
+  border: 1px solid var(--control);
   border-radius: var(--radius-m);
   background: none;
   font: 500 var(--text-xs) / 1 var(--font-mono);

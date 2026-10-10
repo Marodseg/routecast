@@ -265,7 +265,7 @@
 .btn {
   min-height: 40px;
   padding: 0 var(--space-4);
-  border: 1px solid var(--rule-strong);
+  border: 1px solid var(--control);
   border-radius: var(--radius-m);
   background: var(--surface);
   font-weight: 550;

@@ -21,6 +21,8 @@ export interface ThemeColors {
   inkSubtle: Oklch;
   rule: Oklch;
   ruleStrong: Oklch;
+  /** Borde de controles (botones, campos): opaco y ≥ 3:1 con las superficies (WCAG 1.4.11). */
+  control: Oklch;
   accent: Oklch;
   onAccent: Oklch;
   /** Texto en color de acento sobre `surface` (enlaces, «ahora»). */
@@ -49,6 +51,7 @@ export const lightColors: ThemeColors = {
   inkSubtle: oklch(0.5, 0.01, 70),
   rule: oklch(0.19, 0.012, 70, 0.13),
   ruleStrong: oklch(0.19, 0.012, 70, 0.35),
+  control: oklch(0.56, 0.01, 70),
   accent: oklch(0.52, 0.115, 160),
   onAccent: oklch(0.985, 0.004, 85),
   accentInk: oklch(0.47, 0.095, 160),
@@ -73,6 +76,7 @@ export const darkColors: ThemeColors = {
   inkSubtle: oklch(0.66, 0.01, 78),
   rule: oklch(0.94, 0.008, 85, 0.12),
   ruleStrong: oklch(0.94, 0.008, 85, 0.3),
+  control: oklch(0.6, 0.01, 78),
   accent: oklch(0.74, 0.13, 160),
   onAccent: oklch(0.15, 0.006, 70),
   accentInk: oklch(0.78, 0.13, 160),

@@ -34,25 +34,44 @@ const polar = (deg: number, r: number): [number, number] => [
  */
 export function RoadWind(props: RoadWindProps) {
   const markerId = `rw-head-${createUniqueId()}`;
-  const w = createMemo(() => relativeWind(props.headingDeg, props.windFromDeg, props.gustKmH));
-  const heading = () => normalizeDeg(props.headingDeg);
+  /** Datos ausentes o no válidos no son calma: se muestra «sin datos». */
+  const valid = () =>
+    Number.isFinite(props.headingDeg) &&
+    Number.isFinite(props.windFromDeg) &&
+    Number.isFinite(props.gustKmH) &&
+    props.gustKmH >= 0;
+  const w = createMemo(() =>
+    valid()
+      ? relativeWind(props.headingDeg, props.windFromDeg, props.gustKmH)
+      : { headKmH: 0, crossKmH: 0, fromSide: 'none' as const },
+  );
+  const heading = () => (Number.isFinite(props.headingDeg) ? normalizeDeg(props.headingDeg) : 0);
+  // Rotación acumulada por el camino corto: de 359° a 1° gira 2°, no 358°.
+  let lastRotation = heading();
+  const rotation = createMemo(() => {
+    const diff = ((((heading() - lastRotation) % 360) + 540) % 360) - 180;
+    lastRotation += diff;
+    return lastRotation;
+  });
   const len = (kmh: number) => Math.min(MAX_LEN, (kmh / SCALE_KMH) * MAX_LEN);
   // Empuja hacia el lado contrario del que viene: viento desde la derecha → vector hacia la izquierda (-90°).
   const crossEnd = () => polar(heading() + (w().fromSide === 'right' ? -90 : 90), len(w().crossKmH));
   const windTail = () => polar(props.windFromDeg, 14 + len(props.gustKmH) * 0.75);
   const windHead = () => polar(props.windFromDeg + 180, 8);
   const summary = () =>
-    props.gustKmH === 0
-      ? t().roadwind.calm
-      : t().roadwind.summary(
-          Math.round(heading()),
-          Math.round(normalizeDeg(props.windFromDeg)),
-          Math.round(props.gustKmH),
-          Math.round(w().crossKmH),
-        );
+    !valid()
+      ? t().risk.unknown
+      : props.gustKmH === 0
+        ? t().roadwind.calm
+        : t().roadwind.summary(
+            Math.round(heading()),
+            Math.round(normalizeDeg(props.windFromDeg)),
+            Math.round(props.gustKmH),
+            Math.round(w().crossKmH),
+          );
 
   return (
-    <figure class={s.figure} data-level={props.level ?? 'none'}>
+    <figure class={s.figure} data-level={valid() ? (props.level ?? 'none') : 'unknown'}>
       <svg
         class={s.svg}
         viewBox="0 0 120 120"
@@ -70,9 +89,9 @@ export function RoadWind(props: RoadWindProps) {
           }}
         </For>
         <text class={s.north} x={C} y={14} text-anchor="middle">
-          N
+          {t().roadwind.north}
         </text>
-        <g class={s.road} style={{ transform: `rotate(${heading()}deg)` }}>
+        <g class={s.road} style={{ transform: `rotate(${rotation()}deg)` }}>
           <line class={s.roadBand} x1={C} y1={C + 46} x2={C} y2={C - 46} />
           <line class={s.roadCenter} x1={C} y1={C + 46} x2={C} y2={C - 46} />
           <path class={s.roadArrow} d={`M${C - 5},${C - 30} L${C},${C - 38} L${C + 5},${C - 30}`} />
@@ -81,7 +100,7 @@ export function RoadWind(props: RoadWindProps) {
           <line class={s.cross} x1={C} y1={C} x2={crossEnd()[0]} y2={crossEnd()[1]} />
           <circle class={s.crossEnd} cx={crossEnd()[0]} cy={crossEnd()[1]} r={3.2} />
         </Show>
-        <Show when={props.gustKmH > 0}>
+        <Show when={valid() && props.gustKmH > 0}>
           <line
             class={s.wind}
             x1={windTail()[0]}
@@ -100,10 +119,10 @@ export function RoadWind(props: RoadWindProps) {
       <Show when={props.readout}>
         <figcaption class={s.readout}>
           <span>
-            <b class="mono">{Math.round(w().crossKmH)}</b> km/h {t().roadwind.cross}
+            <b class="mono">{Math.round(w().crossKmH)}</b> {t().units.kmh} {t().roadwind.cross}
           </span>
           <span class={s.secondary}>
-            <span class="mono">{Math.abs(Math.round(w().headKmH))}</span> km/h{' '}
+            <span class="mono">{Math.abs(Math.round(w().headKmH))}</span> {t().units.kmh}{' '}
             {w().headKmH >= 0 ? t().roadwind.head : t().roadwind.tail}
           </span>
         </figcaption>

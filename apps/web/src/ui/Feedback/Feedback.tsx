@@ -47,44 +47,94 @@ interface ToastItem {
   id: number;
   tone: ToastTone;
   text: string;
+  ms: number;
 }
+
+/** Errores: no se cierran solos (WCAG 2.2.1). Resto: 6 s, con pausa mientras se señala o enfoca. */
+const DEFAULT_MS: Record<ToastTone, number> = { info: 6000, warning: 6000, error: 0 };
 
 const store = createRoot(() => {
   const [items, setItems] = createSignal<ToastItem[]>([]);
+  const timers = new Map<number, ReturnType<typeof setTimeout>>();
   let seq = 0;
-  const dismiss = (id: number) => setItems((xs) => xs.filter((x) => x.id !== id));
-  const push = (text: string, tone: ToastTone = 'info', ms = 5000) => {
+  const stop = (id: number) => {
+    clearTimeout(timers.get(id));
+    timers.delete(id);
+  };
+  const dismiss = (id: number) => {
+    stop(id);
+    setItems((xs) => xs.filter((x) => x.id !== id));
+  };
+  const start = (id: number, ms: number) => {
+    stop(id);
+    if (ms > 0)
+      timers.set(
+        id,
+        setTimeout(() => dismiss(id), ms),
+      );
+  };
+  const push = (text: string, tone: ToastTone = 'info', ms = DEFAULT_MS[tone]) => {
     const id = ++seq;
-    setItems((xs) => [...xs.slice(-2), { id, tone, text }]);
-    if (ms > 0) setTimeout(() => dismiss(id), ms);
+    setItems((xs) => {
+      const keep = xs.slice(-2);
+      for (const old of xs.slice(0, -2)) stop(old.id);
+      return [...keep, { id, tone, text, ms }];
+    });
+    start(id, ms);
     return id;
   };
-  return { items, push, dismiss };
+  return { items, push, dismiss, pause: stop, resume: (it: ToastItem) => start(it.id, it.ms) };
 });
 
 export const toast = store.push;
 export const dismissToast = store.dismiss;
 
-const toneIcon: Record<ToastTone, IconName> = { info: 'l0', warning: 'l2', error: 'l3' };
+const toneIcon: Record<ToastTone, IconName> = { info: 'info', warning: 'warning', error: 'error' };
 
-/** Región viva de avisos breves. Montar una sola vez en la app. */
+function ToastView(props: { item: ToastItem }) {
+  return (
+    <li
+      class={s.toast}
+      data-tone={props.item.tone}
+      onPointerEnter={() => store.pause(props.item.id)}
+      onPointerLeave={() => store.resume(props.item)}
+      onFocusIn={() => store.pause(props.item.id)}
+      onFocusOut={() => store.resume(props.item)}
+    >
+      <Icon name={toneIcon[props.item.tone]} size={16} />
+      <span>{props.item.text}</span>
+      <button
+        type="button"
+        class={s.dismiss}
+        aria-label={t().toast.dismiss}
+        onClick={() => store.dismiss(props.item.id)}
+      >
+        <Icon name="close" size={14} />
+      </button>
+    </li>
+  );
+}
+
+/**
+ * Avisos breves. Dos regiones vivas montadas siempre (los lectores no anuncian regiones creadas ya llenas):
+ * educada para info/avisos y asertiva para errores. Montar una sola vez en la app.
+ */
 export function Toaster(): JSX.Element {
   onCleanup(() => {
     for (const it of store.items()) store.dismiss(it.id);
   });
   return (
-    <ol class={s.toaster} aria-live="polite" aria-relevant="additions">
-      <For each={store.items()}>
-        {(it) => (
-          <li class={s.toast} data-tone={it.tone} role={it.tone === 'error' ? 'alert' : 'status'}>
-            <Icon name={toneIcon[it.tone]} size={16} />
-            <span>{it.text}</span>
-            <button type="button" class={s.dismiss} aria-label={t().toast.dismiss} onClick={() => store.dismiss(it.id)}>
-              <Icon name="close" size={14} />
-            </button>
-          </li>
-        )}
-      </For>
-    </ol>
+    <div class={s.toaster}>
+      <div aria-live="polite" aria-relevant="additions">
+        <ol class={s.stack}>
+          <For each={store.items().filter((x) => x.tone !== 'error')}>{(it) => <ToastView item={it} />}</For>
+        </ol>
+      </div>
+      <div role="alert" aria-relevant="additions">
+        <ol class={s.stack}>
+          <For each={store.items().filter((x) => x.tone === 'error')}>{(it) => <ToastView item={it} />}</For>
+        </ol>
+      </div>
+    </div>
   );
 }

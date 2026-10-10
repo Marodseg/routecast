@@ -28,11 +28,12 @@ export const es = {
     now: 'Ahora',
     nowMark: 'ahora',
     later: (d: string) => `+${d}`,
-    hint: 'Arrastra el dial o usa las flechas (10 min) y Re Pág / Av Pág (1 h).',
+    hint: 'Arrastra el dial o usa las flechas (10 min), Re Pág / Av Pág (1 h), Inicio (ahora) y Fin (última hora).',
     valueText: (time: string, route: string, level: string) => `Salida a las ${time}. Ruta ${route}: ${level}.`,
   },
   roadwind: {
     title: 'Viento respecto a la carretera',
+    north: 'N',
     summary: (heading: number, from: number, gust: number, cross: number) =>
       `Carretera hacia ${heading}°, viento del ${from}°. De ${gust} km/h de racha, ${cross} km/h empujan de lado.`,
     calm: 'Viento en calma.',
@@ -53,6 +54,9 @@ export const es = {
   profile: {
     label: (route: string) => `Perfil de riesgo de la ruta ${route}`,
     at: (km: number, level: string) => `km ${km}: ${level}`,
+    idle: 'Usa las flechas para recorrer la ruta por kilómetros.',
+    range: (from: number, to: number) => `km ${from}–${to}`,
+    high: (ranges: string) => `Riesgo alto o severo en ${ranges}.`,
   },
   search: {
     from: 'Origen',
@@ -98,6 +102,7 @@ export const es = {
   },
   theme: { label: 'Tema', system: 'Sistema', light: 'Claro', dark: 'Oscuro' },
   lang: { label: 'Idioma', switchTo: 'Switch to English', short: 'EN' },
+  units: { km: 'km', kmh: 'km/h' },
   confidence: { low: 'Previsión a más de 48 h: confianza baja.' },
   attribution:
     '© OpenStreetMap contributors · OpenFreeMap · Weather data by Open-Meteo.com (CC-BY 4.0) · Routing by OSRM / OpenRouteService · Avisos: AEMET / Meteoalarm (EUMETNET)',

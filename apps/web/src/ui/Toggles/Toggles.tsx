@@ -1,4 +1,4 @@
-import { For } from 'solid-js';
+import { createUniqueId, For } from 'solid-js';
 import { lang, setLang, t } from '../../i18n';
 import { setTheme, type ThemePref, theme } from '../../lib/theme';
 import { Icon, type IconName } from '../Icon/Icon';
@@ -12,6 +12,7 @@ const OPTIONS: { value: ThemePref; icon: IconName }[] = [
 
 /** Tema en tres estados (sistema/claro/oscuro) como grupo de radio: flechas para moverse, una sola parada de tabulación. */
 export function ThemeToggle() {
+  const name = `theme-${createUniqueId()}`;
   return (
     <fieldset class={s.group}>
       <legend class="visually-hidden">{t().theme.label}</legend>
@@ -21,7 +22,7 @@ export function ThemeToggle() {
             <input
               class="visually-hidden"
               type="radio"
-              name="routecast-theme"
+              name={name}
               value={o.value}
               checked={theme() === o.value}
               onChange={() => setTheme(o.value)}

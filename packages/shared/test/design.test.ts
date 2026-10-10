@@ -83,6 +83,12 @@ describe.each(themes)('tema %s', (_name, c) => {
     }
   });
 
+  it('el borde de los controles contrasta ≥ 3:1 con las superficies (WCAG 1.4.11)', () => {
+    for (const bg of [c.surface, c.surfaceSunken, c.canvas]) {
+      expect(contrastRatio(c.control, bg)).toBeGreaterThanOrEqual(3);
+    }
+  });
+
   it('cada relleno de riesgo contrasta ≥ 3:1 con el borde de la cinta y con sus pictogramas', () => {
     for (const r of risks(c)) {
       expect(contrastRatio(r, c.routeCasing)).toBeGreaterThanOrEqual(3);
@@ -93,6 +99,7 @@ describe.each(themes)('tema %s', (_name, c) => {
   it.each(['normal', 'protanopia', 'deuteranopia', 'tritanopia'] as const)(
     'los 4 niveles de riesgo se distinguen con visión %s (ΔE_ok ≥ 0,1 entre todos los pares)',
     (type) => {
+      // Red de seguridad: el color nunca es el único canal (patrón + forma de icono + texto).
       const v = risks(c).map((r) =>
         type === 'normal' ? toLinearSrgb(r) : simulateCvd(r, type as ColorVisionDeficiency),
       );
