@@ -25,6 +25,7 @@ function pts(
       factors: { rain: level, crosswind: 0, gust: 0, snow: 0, ice: 0, visibility: 0, storm: 0 },
       unknownFactors: level === 'unknown' ? ['rain'] : [],
       hailRisk: false,
+      partial: false,
     }),
   );
   return { samples, risks };
@@ -60,6 +61,13 @@ describe('aggregateRoute (SPEC §6.4)', () => {
     expect(r.unknownKm).toBe(10);
   });
 
+  it('un extremo en 0 y otro desconocido no es «sin riesgo»: el tramo queda unknown (M1)', () => {
+    const { samples, risks } = pts([0, 'unknown', 0]);
+    const r = aggregateRoute(samples, risks);
+    expect(r.segments.map((s) => s.level)).toEqual(['unknown', 'unknown']);
+    expect(r.unknownKm).toBe(20);
+  });
+
   it('toda la ruta sin datos → unknown sin peor punto', () => {
     const { samples, risks } = pts(['unknown', 'unknown']);
     const r = aggregateRoute(samples, risks);
@@ -92,5 +100,13 @@ describe('rankRoutes', () => {
       { id: 'E', durationS: 3000, risk: { ...base, worstLevel: 3, kmAtLevel2Plus: 10 } },
     ]);
     expect(ranked.map((r) => r.id)).toEqual(['C', 'B', 'E', 'A', 'D']);
+  });
+
+  it('a igual nivel y km en riesgo, gana la ruta con menos km sin datos', () => {
+    const ranked = rankRoutes([
+      { id: 'X', durationS: 1000, risk: { ...base, worstLevel: 1, kmAtLevel2Plus: 0, unknownKm: 80 } },
+      { id: 'Y', durationS: 2000, risk: { ...base, worstLevel: 1, kmAtLevel2Plus: 0, unknownKm: 0 } },
+    ]);
+    expect(ranked.map((r) => r.id)).toEqual(['Y', 'X']);
   });
 });

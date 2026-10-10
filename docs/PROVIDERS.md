@@ -29,6 +29,16 @@ Contexto de uso: proyecto personal/portfolio **sin monetización**. Si eso cambi
 - Endpoint: `https://api.open-meteo.com/v1/forecast`. Variables útiles: `precipitation`, `rain`, `snowfall`, `weather_code`, `wind_speed_10m`, `wind_gusts_10m`, `wind_direction_10m`, `temperature_2m`, `visibility`, `cape`, `lightning_potential`, `freezing_level_height`.
 - Modelos relevantes: `best_match` por defecto; para España conviene comparar `meteofrance_arome_france_hd` (solo Francia), `icon_eu`, `ecmwf_ifs025`. Cobertura de modelos de alta resolución sobre España **[VERIFICAR]** antes de fijar el modelo.
 - `lightning_potential` y otras variables pueden venir `null` según modelo.
+- **Semántica temporal (verificado en open-meteo.com/en/docs, 2026-10-10)**: casi todas las variables horarias son
+  **instantáneas** en el sello. Excepciones: `precipitation`, `rain`, `showers` y `snowfall` son **suma de la hora
+  anterior** y `wind_gusts_10m` es el **máximo de la hora anterior**: el sello t cubre (t − 1 h, t]. `packages/core`
+  (`weather.ts → hoursAround`) lo tiene en cuenta. `snowfall` en cm (agua equivalente = cm / 7), `visibility` en m.
+- **`lightning_potential` no existe como variable horaria**: solo en datos de 15 min y para algunos modelos
+  (verificado 2026-10-10). Con datos horarios el factor tormenta se evalúa por `weather_code` (95/96/99) y la regla
+  CAPE + rayos solo actúa si llega el dato.
+- **`elevation`**: parámetro opcional para la reducción estadística de escala (por defecto, MDT de 90 m;
+  `elevation=nan` la desactiva). Pedir cada celda con la cota real del tramo mejoraría temperatura/nieve/hielo en
+  puertos; pendiente en el adaptador (fase 3) **[VERIFICAR coste en multi-ubicación]**.
 - No ofrece avisos. Sin nowcasting minuto a minuto en el plan gratuito.
 - **El límite es por IP**: llamar desde el navegador (IP de cada usuario). Desde Workers/servidores compartidos se han visto 429 por tráfico ajeno.
 - **[VERIFICAR]** cómo se cuentan las llamadas con muchas ubicaciones en una petición contra el límite diario.

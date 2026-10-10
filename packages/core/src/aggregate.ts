@@ -19,10 +19,13 @@ export interface RouteRisk {
   segments: RiskSegment[];
 }
 
-/** Máximo entre niveles: lo conocido manda; dos desconocidos dan desconocido. */
+/**
+ * Máximo entre niveles. Un riesgo conocido (≥ 1) manda aunque el otro extremo no tenga datos; pero «0 y sin datos»
+ * no permite afirmar «sin riesgo»: es desconocido.
+ */
 export function maxLevel(a: RiskLevelOrUnknown, b: RiskLevelOrUnknown): RiskLevelOrUnknown {
-  if (a === 'unknown') return b;
-  if (b === 'unknown') return a;
+  if (a === 'unknown') return b === 0 ? 'unknown' : b;
+  if (b === 'unknown') return a === 0 ? 'unknown' : a;
   return a > b ? a : b;
 }
 
@@ -77,16 +80,17 @@ export function aggregateRoute(samples: readonly SamplePoint[], risks: readonly 
 export interface RankInput {
   id: string;
   durationS: number;
-  risk: Pick<RouteRisk, 'worstLevel' | 'kmAtLevel2Plus'>;
+  risk: Pick<RouteRisk, 'worstLevel' | 'kmAtLevel2Plus'> & Partial<Pick<RouteRisk, 'unknownKm'>>;
 }
 
-/** Comparador: peor nivel ↑, km en riesgo alto ↑, duración ↑. Rutas sin datos al final (SPEC §6.4). */
+/** Comparador: peor nivel ↑, km en riesgo alto ↑, km sin datos ↑, duración ↑. Rutas sin datos al final (SPEC §6.4). */
 export function rankRoutes<T extends RankInput>(routes: readonly T[]): T[] {
   const lv = (l: RiskLevelOrUnknown) => (l === 'unknown' ? 4 : l);
   return [...routes].sort(
     (a, b) =>
       lv(a.risk.worstLevel) - lv(b.risk.worstLevel) ||
       a.risk.kmAtLevel2Plus - b.risk.kmAtLevel2Plus ||
+      (a.risk.unknownKm ?? 0) - (b.risk.unknownKm ?? 0) ||
       a.durationS - b.durationS,
   );
 }

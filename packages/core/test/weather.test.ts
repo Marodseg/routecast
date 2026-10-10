@@ -9,6 +9,7 @@ describe('cellKey', () => {
     [{ lat: 36.75, lng: -4.45 }, '36.8:-4.5'],
     [{ lat: -0.04, lng: 0.04 }, '0.0:0.0'],
     [{ lat: -33.86, lng: 151.21 }, '-33.9:151.2'],
+    [{ lat: 0, lng: -180 }, '0.0:180.0'],
   ])('%o → %s', (p, key) => {
     expect(cellKey(p)).toBe(key);
   });
@@ -20,7 +21,8 @@ describe('cellKey', () => {
         fc.double({ min: -180, max: 180, noNaN: true }),
         (lat, lng) => {
           const c = cellCenter(cellKey({ lat, lng }));
-          return Math.abs(c.lat - lat) <= 0.05 + 1e-9 && Math.abs(c.lng - lng) <= 0.05 + 1e-9;
+          const dLng = Math.abs(((c.lng - lng + 540) % 360) - 180);
+          return Math.abs(c.lat - lat) <= 0.05 + 1e-9 && dLng <= 0.05 + 1e-9;
         },
       ),
     );
@@ -44,28 +46,49 @@ describe('uniqueCells', () => {
   });
 });
 
-describe('hoursAround (ventana ±30 min)', () => {
-  const hw = hourly(6);
-
-  it('ETA en punto: solo esa hora', () => {
-    expect(hoursAround(hw, T0 + 2 * H).map((h) => h.timeMs)).toEqual([T0 + 2 * H]);
+describe('hoursAround: semántica horaria de Open-Meteo', () => {
+  const MIN = 60_000;
+  // Precipitación y rachas: agregado de la hora ANTERIOR al sello (t−1 h, t]. Resto: instantáneo en t.
+  const hw = hourly(8, {
+    2: { precipitationMmH: 1, gustsKmH: 20, windFromDeg: 10, visibilityM: 5000 },
+    3: { precipitationMmH: 9, gustsKmH: 90, windFromDeg: 30, visibilityM: 8000 },
+    4: { precipitationMmH: 0, gustsKmH: 15, windFromDeg: 40, visibilityM: 9000 },
   });
 
-  it('ETA a la media: las dos horas vecinas (bordes inclusivos)', () => {
-    expect(hoursAround(hw, T0 + 2.5 * H).map((h) => h.timeMs)).toEqual([T0 + 2 * H, T0 + 3 * H]);
+  it('ETA 2:15 → instantáneos del sello 2:00; acumulados de 2:00 (1-2 h) y 3:00 (2-3 h)', () => {
+    const r = hoursAround(hw, T0 + 2 * H + 15 * MIN);
+    expect(r.map((x) => x.timeMs)).toEqual([T0 + 2 * H, T0 + 3 * H]);
+    // El sello 3:00 aporta la lluvia/racha de 2-3 h, que cubre la ETA; su dirección es la del instante más cercano (2:00).
+    expect(r[1]).toMatchObject({ precipitationMmH: 9, gustsKmH: 90, windFromDeg: 10, visibilityM: 5000 });
   });
 
-  it('ETA a :10 → la hora en punto más cercana', () => {
-    expect(hoursAround(hw, T0 + 2 * H + 10 * 60_000).map((h) => h.timeMs)).toEqual([T0 + 2 * H]);
+  it('ETA 2:45 → instantáneo 3:00; acumulados 3:00 (2-3 h) y 4:00 (3-4 h, solapa hasta 3:15)', () => {
+    const r = hoursAround(hw, T0 + 2 * H + 45 * MIN);
+    expect(r.map((x) => x.timeMs)).toEqual([T0 + 3 * H, T0 + 4 * H]);
+    expect(r[0]).toMatchObject({ precipitationMmH: 9, windFromDeg: 30 });
+  });
+
+  it('ETA en punto (2:00) → acumulados de 2:00 y 3:00, instantáneo 2:00', () => {
+    const r = hoursAround(hw, T0 + 2 * H);
+    expect(r.map((x) => x.timeMs)).toEqual([T0 + 2 * H, T0 + 3 * H]);
+    expect(r.every((x) => x.visibilityM === 5000)).toBe(true);
+  });
+
+  it('ETA a la media (2:30) → los dos instantáneos y el acumulado 3:00', () => {
+    const r = hoursAround(hw, T0 + 2.5 * H);
+    expect(r.map((x) => x.timeMs)).toEqual([T0 + 2 * H, T0 + 3 * H]);
+    // El sello 2:00 solo aporta instantáneos (su acumulado es de 1-2 h, fuera de la ventana).
+    expect(r[0]).toMatchObject({ precipitationMmH: null, gustsKmH: null, visibilityM: 5000 });
+    expect(r[1]).toMatchObject({ precipitationMmH: 9, visibilityM: 8000 });
   });
 
   it('fuera del horizonte → vacío (no se inventan datos)', () => {
-    expect(hoursAround(hw, T0 + 10 * H)).toEqual([]);
+    expect(hoursAround(hw, T0 + 20 * H)).toEqual([]);
     expect(hoursAround(hw, T0 - 2 * H)).toEqual([]);
   });
 
   it('conserva los null tal cual', () => {
-    const withNull = hourly(3, { 1: { gustsKmH: null } });
-    expect(hoursAround(withNull, T0 + H)[0]?.gustsKmH).toBeNull();
+    const withNull = hourly(4, { 1: { gustsKmH: null } });
+    expect(hoursAround(withNull, T0 + 30 * MIN).find((x) => x.timeMs === T0 + H)?.gustsKmH).toBeNull();
   });
 });

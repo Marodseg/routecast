@@ -9,6 +9,8 @@ export interface PointAssessment extends PointRisk {
   factors: FactorLevels;
   /** Factores sin dato: la UI debe decirlo («sin datos de viento en este tramo»). */
   unknownFactors: Factor[];
+  /** Nivel calculado con algún factor secundario ausente. */
+  partial: boolean;
   /** Códigos 96/99 o CAPE+rayos altos: «riesgo de tormenta con granizo», nunca «granizará». */
   hailRisk: boolean;
 }
@@ -36,8 +38,9 @@ export function scoreHour(h: HourSample, headingDeg: number, th: Thresholds): Ho
 
   let ice: RiskLevelOrUnknown;
   if (h.weatherCode !== null && th.ice.freezingCodes.includes(h.weatherCode)) ice = 2;
+  else if (h.tempC !== null && h.tempC > th.ice.maxTempC) ice = 0;
   else if (h.tempC === null || h.precipitationMmH === null) ice = 'unknown';
-  else ice = h.tempC <= th.ice.maxTempC && h.precipitationMmH >= th.ice.minPrecipMmH ? 1 : 0;
+  else ice = h.precipitationMmH >= th.ice.minPrecipMmH ? 1 : 0;
 
   const convective =
     h.cape !== null &&
@@ -75,22 +78,36 @@ const maxNullable = (a: number | null | undefined, b: number | null): number | n
 const minNullable = (a: number | null | undefined, b: number | null): number | null =>
   b === null ? (a ?? null) : a === null || a === undefined ? b : Math.min(a, b);
 
+/** Bonus de coincidencia dentro de UNA hora: grupos independientes en nivel ≥ 2. */
+function hourLevel(f: FactorLevels, th: Thresholds): RiskLevel {
+  let max: RiskLevel = 0;
+  for (const k of FACTORS) {
+    const v = f[k];
+    if (v !== 'unknown' && v > max) max = v;
+  }
+  const severeGroups = th.coincidenceGroups.filter((g) => g.some((k) => f[k] === 2 || f[k] === 3)).length;
+  return Math.min(3, max + (max >= 2 && severeGroups >= th.coincidenceFactors ? 1 : 0)) as RiskLevel;
+}
+
 /**
- * Riesgo de un punto: peor caso por factor en las horas de la ventana, nivel = máximo de factores
- * (+1 si coinciden ≥ 2 factores en nivel ≥ 2, acotado a 3). Datos ausentes nunca cuentan como 0:
- * si lo conocido es 0 pero falta algún factor, el punto es `unknown`.
+ * Riesgo de un punto (SPEC §6.3): cada hora de la ventana se puntúa por separado (bonus de coincidencia incluido)
+ * y el punto toma la peor hora; por factor se guarda el peor caso para explicar. Datos ausentes nunca cuentan como 0:
+ * si falta un factor esencial y lo conocido es 0, el punto es `unknown`; si falta uno secundario, es 0 «parcial».
  */
 export function scorePoint(hours: readonly HourSample[], headingDeg: number, th: Thresholds): PointAssessment {
   const factors = Object.fromEntries(FACTORS.map((f) => [f, 'unknown'])) as FactorLevels;
   if (hours.length === 0) {
-    return { level: 'unknown', values: {}, factors, unknownFactors: [...FACTORS], hailRisk: false };
+    return { level: 'unknown', values: {}, factors, unknownFactors: [...FACTORS], hailRisk: false, partial: false };
   }
 
   const values: Record<string, number | null> = {};
   let hailRisk = false;
+  let level: RiskLevel = 0;
   for (const h of hours) {
     const s = scoreHour(h, headingDeg, th);
     hailRisk ||= s.hailRisk;
+    const hl = hourLevel(s.factors, th);
+    if (hl > level) level = hl;
     for (const f of FACTORS) {
       const cur = factors[f];
       const next = s.factors[f];
@@ -106,18 +123,25 @@ export function scorePoint(hours: readonly HourSample[], headingDeg: number, th:
   }
 
   const unknownFactors = FACTORS.filter((f) => factors[f] === 'unknown');
-  const known = FACTORS.filter((f) => factors[f] !== 'unknown');
-  const levelOf = (f: Factor) => factors[f] as RiskLevel;
-  const max = known.reduce<RiskLevel>((m, f) => (levelOf(f) > m ? levelOf(f) : m), 0);
-
-  if (max === 0) {
-    return unknownFactors.length
-      ? { level: 'unknown', values, factors, unknownFactors, hailRisk }
-      : { level: 0, values, factors, unknownFactors, hailRisk };
+  if (level === 0) {
+    const missingEssential = unknownFactors.some((f) => th.essentialFactors.includes(f));
+    if (missingEssential) return { level: 'unknown', values, factors, unknownFactors, hailRisk, partial: false };
+    return { level: 0, values, factors, unknownFactors, hailRisk, partial: unknownFactors.length > 0 };
   }
 
-  const severe = known.filter((f) => levelOf(f) >= 2).length;
-  const level = Math.min(3, max + (severe >= th.coincidenceFactors ? 1 : 0)) as RiskLevel;
-  const dominant = PRIORITY.filter((f) => factors[f] === max)[0];
-  return { level, ...(dominant ? { dominant } : {}), values, factors, unknownFactors, hailRisk };
+  let maxFactor: RiskLevel = 0;
+  for (const f of FACTORS) {
+    const v = factors[f];
+    if (v !== 'unknown' && v > maxFactor) maxFactor = v;
+  }
+  const dominant = PRIORITY.find((f) => factors[f] === maxFactor);
+  return {
+    level,
+    ...(dominant ? { dominant } : {}),
+    values,
+    factors,
+    unknownFactors,
+    hailRisk,
+    partial: unknownFactors.length > 0,
+  };
 }

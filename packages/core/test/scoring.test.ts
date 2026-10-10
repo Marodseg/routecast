@@ -121,6 +121,10 @@ describe('scoreHour: datos ausentes', () => {
     expect(scoreHour(calmHour(undefined, { tempC: null, weatherCode: 66 }), HEADING, TH).factors.ice).toBe(2);
     expect(scoreHour(calmHour(undefined, { tempC: null, weatherCode: null }), HEADING, TH).factors.ice).toBe('unknown');
   });
+
+  it('hielo: por encima de 2 °C es 0 aunque falte la precipitación (B1)', () => {
+    expect(scoreHour(calmHour(undefined, { tempC: 5, precipitationMmH: null }), HEADING, TH).factors.ice).toBe(0);
+  });
 });
 
 describe('scorePoint: combinación (SPEC §6.3)', () => {
@@ -137,15 +141,41 @@ describe('scorePoint: combinación (SPEC §6.3)', () => {
     expect(p.values.precipitationMmH).toBe(8);
   });
 
-  it('dos factores en nivel ≥ 2 suben un nivel, acotado a 3', () => {
-    const two = scorePoint([calmHour(undefined, { precipitationMmH: 8, tempC: 15, visibilityM: 300 })], HEADING, TH);
-    expect(two.level).toBe(3);
-    const already3 = scorePoint(
-      [calmHour(undefined, { precipitationMmH: 25, tempC: 15, visibilityM: 50 })],
+  it('dos grupos independientes en nivel ≥ 2 en la misma hora suben un nivel, acotado a 3', () => {
+    const two = scorePoint(
+      [calmHour(undefined, { precipitationMmH: 8, tempC: 15, gustsKmH: 85, windFromDeg: 0 })],
       HEADING,
       TH,
     );
+    expect(two.factors.rain).toBe(2);
+    expect(two.factors.gust).toBe(2);
+    expect(two.level).toBe(3);
+    const already3 = scorePoint([calmHour(undefined, { precipitationMmH: 25, tempC: 15, gustsKmH: 105 })], HEADING, TH);
     expect(already3.level).toBe(3);
+  });
+
+  it('racha y racha cruzada salen de la misma medida: no se suman en el bonus (S1)', () => {
+    // 85 km/h a 60° del rumbo: racha nivel 2 y cruzada 73,6 km/h nivel 2 → sigue siendo 2.
+    const p = scorePoint([calmHour(undefined, { gustsKmH: 85, windFromDeg: 60 })], HEADING, TH);
+    expect(p.factors.gust).toBe(2);
+    expect(p.factors.crosswind).toBe(2);
+    expect(p.level).toBe(2);
+  });
+
+  it('lluvia y visibilidad están correlacionadas en el modelo: no se suman en el bonus', () => {
+    const p = scorePoint([calmHour(undefined, { precipitationMmH: 8, tempC: 15, visibilityM: 300 })], HEADING, TH);
+    expect(p.level).toBe(2);
+  });
+
+  it('el bonus se calcula dentro de cada hora, no mezclando horas distintas (B5)', () => {
+    const p = scorePoint(
+      [calmHour(undefined, { precipitationMmH: 8, tempC: 15 }), calmHour(undefined, { gustsKmH: 85, windFromDeg: 0 })],
+      HEADING,
+      TH,
+    );
+    expect(p.factors.rain).toBe(2);
+    expect(p.factors.gust).toBe(2);
+    expect(p.level).toBe(2);
   });
 
   it('el peor caso de la ventana se toma por factor (lluvia de una hora, racha de otra)', () => {
@@ -161,7 +191,7 @@ describe('scorePoint: combinación (SPEC §6.3)', () => {
     expect(p.dominant).toBe('crosswind');
   });
 
-  it('con riesgo 0 conocido pero algún factor desconocido el punto es unknown (no «sin riesgo»)', () => {
+  it('con riesgo 0 conocido pero un factor ESENCIAL desconocido (viento, lluvia) el punto es unknown', () => {
     const p = scorePoint([calmHour(undefined, { gustsKmH: null })], HEADING, TH);
     expect(p.level).toBe('unknown');
     expect(p.unknownFactors).toEqual(expect.arrayContaining(['crosswind', 'gust']));
@@ -171,6 +201,13 @@ describe('scorePoint: combinación (SPEC §6.3)', () => {
     const p = scorePoint([calmHour(undefined, { gustsKmH: null, precipitationMmH: 8, tempC: 15 })], HEADING, TH);
     expect(p.level).toBe(2);
     expect(p.unknownFactors).toEqual(expect.arrayContaining(['crosswind', 'gust']));
+  });
+
+  it('si solo falta un factor secundario (visibilidad) el punto es 0 parcial, no unknown (M2)', () => {
+    const p = scorePoint([calmHour(undefined, { visibilityM: null })], HEADING, TH);
+    expect(p.level).toBe(0);
+    expect(p.partial).toBe(true);
+    expect(p.unknownFactors).toEqual(['visibility']);
   });
 
   it('una hora en calma total es nivel 0 sin factor determinante', () => {
