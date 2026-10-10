@@ -1,0 +1,172 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "files": {
+    "includes": [
+      "**",
+      "!**/routecast-kit",
+      "!**/.vscode",
+      "!**/design/prototypes",
+      "!**/pnpm-lock.yaml",
+      "!**/.wrangler",
+      "!**/dist",
+      "!**/coverage"
+    ]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 120
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "single",
+      "semicolons": "always",
+      "trailingCommas": "all"
+    }
+  },
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "recommended",
+      "suspicious": {
+        "noExplicitAny": "error",
+        "noConsole": {
+          "level": "error",
+          "options": {
+            "allow": ["warn", "error"]
+          }
+        }
+      },
+      "style": {
+        "noNonNullAssertion": "error",
+        "useConst": "error"
+      }
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["packages/core/src/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedGlobals": {
+              "level": "error",
+              "options": {
+                "deniedGlobals": {
+                  "fetch": "core es puro: la red va en packages/providers (ADR-0005).",
+                  "window": "core es puro: sin DOM (ADR-0005).",
+                  "document": "core es puro: sin DOM (ADR-0005).",
+                  "navigator": "core es puro: sin DOM (ADR-0005).",
+                  "localStorage": "core es puro: sin almacenamiento (ADR-0005).",
+                  "indexedDB": "core es puro: sin almacenamiento (ADR-0005).",
+                  "XMLHttpRequest": "core es puro: la red va en packages/providers (ADR-0005).",
+                  "Date": "core es puro: el reloj se inyecta como UnixMs (ADR-0005).",
+                  "performance": "core es puro: el reloj se inyecta (ADR-0005).",
+                  "setTimeout": "core es puro y síncrono (ADR-0005).",
+                  "setInterval": "core es puro y síncrono (ADR-0005).",
+                  "process": "core es puro: sin entorno de ejecución (ADR-0005).",
+                  "globalThis": "core es puro: sin acceso a globales del entorno (ADR-0005).",
+                  "self": "core es puro: sin acceso a globales del entorno (ADR-0005).",
+                  "crypto": "core es determinista: sin aleatoriedad (ADR-0005)."
+                }
+              }
+            },
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "**",
+                      "!@routecast/shared",
+                      "!./**",
+                      "!../**",
+                      "../**/providers/**",
+                      "../**/apps/**",
+                      "../**/web/**",
+                      "../**/worker/**"
+                    ],
+                    "message": "core es puro: solo puede importar @routecast/shared y sus propios módulos (ADR-0005)."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/shared/src/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "**",
+                      "!zod",
+                      "!./**",
+                      "!../**",
+                      "../**/core/**",
+                      "../**/providers/**",
+                      "../**/apps/**",
+                      "../**/web/**",
+                      "../**/worker/**"
+                    ],
+                    "message": "shared solo depende de zod (ARCHITECTURE §2)."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/providers/src/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "**",
+                      "!zod",
+                      "!@routecast/shared",
+                      "!./**",
+                      "!../**",
+                      "../**/core/**",
+                      "../**/apps/**",
+                      "../**/web/**",
+                      "../**/worker/**"
+                    ],
+                    "message": "providers solo conoce shared y zod (ARCHITECTURE §2)."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

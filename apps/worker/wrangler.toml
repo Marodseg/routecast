@@ -1,0 +1,10 @@
+name = "routecast-api"
+main = "src/index.ts"
+compatibility_date = "2026-09-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Secretos (AEMET_API_KEY, ORS_API_KEY) con `wrangler secret put`; nunca aquí.
+# En local van en .dev.vars (ignorado por git).
+
+[vars]
+ALLOWED_ORIGINS = "http://localhost:5173,http://localhost:4173"
