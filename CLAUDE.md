@@ -43,17 +43,24 @@ pnpm workspaces · TypeScript `strict` · Vite · MapLibre GL + OpenFreeMap · H
 Zod para validar TODA respuesta externa · Vitest · Playwright · Biome (lint+format) ·
 GitHub Actions · Wrangler.
 
-## Comandos (rellenar tras la fase 0)
+## Comandos
 
 ```
 pnpm install
-pnpm dev            # web + worker en local
-pnpm test           # vitest (todos los paquetes)
-pnpm test:e2e       # playwright
-pnpm lint           # biome check
-pnpm typecheck      # tsc -b
-pnpm build
+pnpm dev            # web (Vite, :5173) + worker (wrangler dev, :8787)
+pnpm test           # vitest run, todos los paquetes (projects en vitest.config.ts)
+pnpm test:coverage  # idem con cobertura v8 (umbral ≥ 90 % en packages/core)
+pnpm test:e2e       # playwright en apps/web (build + preview :4173; móvil y escritorio)
+pnpm lint           # biome check: formato, lint y fronteras entre paquetes (noRestrictedImports/Globals)
+pnpm lint:fix       # biome check --write
+pnpm typecheck      # tsc --noEmit en cada paquete (pnpm -r typecheck)
+pnpm build          # vite build (web) + wrangler deploy --dry-run (worker)
+pnpm size           # size-limit sobre apps/web/dist (requiere build)
+pnpm --filter @routecast/web exec playwright install chromium   # primera vez
 ```
+
+Notas: los paquetes exportan su `src/index.ts` directamente (sin paso de build). Las fronteras `core`/`shared`/`providers`
+se imponen con Biome (`biome.json` → `overrides`), no con dependency-cruiser (no soporta Node impar local).
 
 Si un comando no existe todavía, créalo en la fase correspondiente; no lo inventes en la documentación.
 

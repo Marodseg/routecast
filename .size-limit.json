@@ -1,0 +1,8 @@
+[
+  {
+    "name": "web: JS inicial (gzip)",
+    "path": "apps/web/dist/assets/*.js",
+    "limit": "350 KB",
+    "gzip": true
+  }
+]
