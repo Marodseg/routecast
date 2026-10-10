@@ -92,6 +92,7 @@
                     "group": [
                       "**",
                       "!@routecast/shared",
+                      "!@routecast/shared/**",
                       "!./**",
                       "!../**",
                       "../**/providers/**",
@@ -152,6 +153,7 @@
                       "**",
                       "!zod",
                       "!@routecast/shared",
+                      "!@routecast/shared/**",
                       "!./**",
                       "!../**",
                       "../**/core/**",

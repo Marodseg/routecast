@@ -1,0 +1,99 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_type": "R",
+        "osm_id": 344685,
+        "osm_key": "place",
+        "osm_value": "city",
+        "type": "city",
+        "name": "Granada",
+        "county": "Comarca de la Vega de Granada",
+        "state": "Andalucía",
+        "country": "España",
+        "countrycode": "ES",
+        "extra": { "admin_level": "8" },
+        "extent": [-3.7003616, 37.2250172, -3.4963241, 37.1367032]
+      },
+      "geometry": { "type": "Point", "coordinates": [-3.5995337, 37.1734995] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_type": "N",
+        "osm_id": 13275224709,
+        "osm_key": "shop",
+        "osm_value": "paint",
+        "type": "house",
+        "name": "Granada",
+        "street": "Calle Begoña",
+        "city": "Coslada",
+        "state": "Comunidad de Madrid",
+        "country": "España",
+        "postcode": "28821",
+        "countrycode": "ES"
+      },
+      "geometry": { "type": "Point", "coordinates": [-3.5688415, 40.4255799] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_type": "N",
+        "osm_id": 4212481809,
+        "osm_key": "highway",
+        "osm_value": "bus_stop",
+        "type": "house",
+        "name": "Granada - Ctra. M406",
+        "street": "Avenida de Valladolid",
+        "locality": "Derechos Humanos",
+        "district": "Vereda de los Estudiantes",
+        "city": "Leganés",
+        "state": "Comunidad de Madrid",
+        "country": "España",
+        "postcode": "28914",
+        "countrycode": "ES"
+      },
+      "geometry": { "type": "Point", "coordinates": [-3.7503412, 40.3195992] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_type": "N",
+        "osm_id": 4142653925,
+        "osm_key": "highway",
+        "osm_value": "bus_stop",
+        "type": "house",
+        "name": "Granada - Maestros",
+        "street": "Calle Granada",
+        "locality": "El Recreo",
+        "city": "Móstoles",
+        "state": "Comunidad de Madrid",
+        "country": "España",
+        "postcode": "28934",
+        "countrycode": "ES"
+      },
+      "geometry": { "type": "Point", "coordinates": [-3.8789431, 40.3270925] }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_type": "N",
+        "osm_id": 4142653926,
+        "osm_key": "highway",
+        "osm_value": "bus_stop",
+        "type": "house",
+        "name": "Granada - Jaen",
+        "street": "Calle Granada",
+        "locality": "El Recreo",
+        "city": "Móstoles",
+        "state": "Comunidad de Madrid",
+        "country": "España",
+        "postcode": "28934",
+        "countrycode": "ES"
+      },
+      "geometry": { "type": "Point", "coordinates": [-3.8760548, 40.3258093] }
+    }
+  ]
+}
