@@ -1,0 +1,8 @@
+---
+description: Reglas del proyecto Routecast
+alwaysApply: true
+---
+
+La fuente de verdad de las reglas del proyecto es `CLAUDE.md` en la raíz. Léelo antes de proponer cambios.
+Especificación en `docs/SPEC.md`, arquitectura en `docs/ARCHITECTURE.md`, límites de APIs en `docs/PROVIDERS.md`.
+No dupliques reglas aquí: si hay que cambiar una, cámbiala en `CLAUDE.md`.

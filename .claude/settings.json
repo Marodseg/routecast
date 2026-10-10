@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(pnpm install)",
+      "Bash(pnpm dev)",
+      "Bash(pnpm build)",
+      "Bash(pnpm lint)",
+      "Bash(pnpm lint:*)",
+      "Bash(pnpm typecheck)",
+      "Bash(pnpm test)",
+      "Bash(pnpm test:*)",
+      "Bash(pnpm --filter *)",
+      "Bash(pnpm exec playwright *)",
+      "Bash(pnpm exec vitest *)",
+      "Bash(pnpm exec biome *)",
+      "Bash(git status)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git branch:*)",
+      "Bash(git switch:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "WebFetch(domain:open-meteo.com)",
+      "WebFetch(domain:openrouteservice.org)",
+      "WebFetch(domain:opendata.aemet.es)",
+      "WebFetch(domain:api.meteoalarm.org)",
+      "WebFetch(domain:developers.cloudflare.com)",
+      "WebFetch(domain:github.com)"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(./**/.dev.vars)",
+      "Read(./**/*.pem)",
+      "Bash(rm -rf *)",
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "Bash(curl *)",
+      "Bash(wget *)"
+    ]
+  }
+}

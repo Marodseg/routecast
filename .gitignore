@@ -1,0 +1,29 @@
+# deps / build
+node_modules/
+dist/
+build/
+coverage/
+.wrangler/
+*.tsbuildinfo
+.vite/
+
+# test output
+playwright-report/
+test-results/
+blob-report/
+
+# secrets — never commit
+.env
+.env.*
+!.env.example
+.dev.vars
+.dev.vars.*
+*.pem
+
+# os / editor
+.DS_Store
+Thumbs.db
+*.log
+
+# reference copy of the starter kit
+routecast-kit/
