@@ -99,7 +99,19 @@ niveles, más un pequeño incremento si coinciden ≥ 2 factores en nivel ≥ 2 
 | Nieve (cm/h) | > 0 | ≥ 0,5 | ≥ 2 |
 | Hielo posible | T ≤ 2 °C con precip. | `weather_code` 56/57/66/67 | — |
 | Visibilidad (m) | < 1000 | < 400 | < 100 |
-| Tormenta | códigos 95 | códigos 96/99 (con granizo) o CAPE alto + `lightning_potential` alto | — |
+| Tormenta | códigos 95 | códigos 96/99 (con granizo) o CAPE alto + `lightning_potential` alto (solo si el modelo lo da; ver PROVIDERS) | — |
+
+Detalles de implementación (fase 2, revisados con `scoring-reviewer`):
+- La ventana ±30 min respeta la semántica de Open-Meteo: lluvia, nieve y rachas son agregados de la hora anterior al
+  sello, así que entran los sellos cuyo intervalo solapa la ventana; el resto son instantáneos. Cada hora se puntúa por
+  separado (racha cruzada = racha × |sen θ| con la dirección de la misma ventana) y el punto toma la peor hora.
+- El incremento por coincidencia se calcula dentro de la misma hora y por **grupos independientes**: racha y racha
+  cruzada cuentan como uno (misma medida); lluvia, nieve y visibilidad también (correlacionadas en el modelo).
+- Factores esenciales: lluvia, racha y viento cruzado. Si falta uno y lo conocido es 0 → `unknown`. Si falta uno
+  secundario (p. ej. visibilidad) → nivel 0 «parcial» y la UI lo indica.
+- Un tramo con un extremo en 0 y otro sin datos es `unknown`; con un extremo ≥ 1 hereda ese nivel.
+- `kmAtLevel2Plus` es conservador (un punto en nivel 2 tiñe los dos tramos vecinos): la UI lo presenta como
+  «hasta X km», no como medida exacta.
 
 Reglas de honestidad:
 - Códigos 96/99 y combinación CAPE/rayos significan **"riesgo de tormenta con granizo"**, nunca "granizará".
