@@ -49,7 +49,6 @@ export class PhotonGeocoding implements GeocodingProvider {
     const params = new URLSearchParams({
       q,
       limit: String(this.#o.limit ?? 6),
-      lang: 'default',
       lat: bias.lat.toFixed(3),
       lon: bias.lng.toFixed(3),
     });

@@ -33,15 +33,18 @@ export const realClock: Clock = {
 export class CircuitBreaker {
   #fails = 0;
   #openedAt: number | null = null;
+  #coolDown: number;
   constructor(
     readonly threshold = 2,
     readonly coolDownMs = 60_000,
     readonly clock: Pick<Clock, 'now'> = realClock,
-  ) {}
+  ) {
+    this.#coolDown = coolDownMs;
+  }
 
   get state(): 'closed' | 'open' | 'half-open' {
     if (this.#openedAt === null) return 'closed';
-    return this.clock.now() - this.#openedAt >= this.coolDownMs ? 'half-open' : 'open';
+    return this.clock.now() - this.#openedAt >= this.#coolDown ? 'half-open' : 'open';
   }
 
   canTry(): boolean {
@@ -53,9 +56,13 @@ export class CircuitBreaker {
     this.#openedAt = null;
   }
 
-  failure(): void {
+  /** Si el proveedor pidió esperar (Retry-After), el circuito no se reabre antes. */
+  failure(retryAfterS?: number): void {
     this.#fails++;
-    if (this.state === 'half-open' || this.#fails >= this.threshold) this.#openedAt = this.clock.now();
+    if (this.state === 'half-open' || this.#fails >= this.threshold || retryAfterS !== undefined) {
+      this.#openedAt = this.clock.now();
+      this.#coolDown = Math.max(this.coolDownMs, (retryAfterS ?? 0) * 1000);
+    }
   }
 }
 
@@ -127,7 +134,7 @@ export class FallbackRouting implements RoutingProvider {
         return res;
       }
       if (!RETRYABLE.has(res.error.kind)) return res;
-      e.breaker.failure();
+      e.breaker.failure(res.error.kind === 'rate_limited' ? res.error.retryAfterS : undefined);
       last = res.error;
     }
     return err(last);

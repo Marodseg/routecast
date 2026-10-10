@@ -89,6 +89,21 @@ describe('FallbackRouting', () => {
     expect(chain.status()[0]?.state).toBe('closed');
   });
 
+  it('un 429 con Retry-After mantiene el circuito abierto al menos ese tiempo', async () => {
+    const c = clock();
+    const a = fake('a', [{ kind: 'rate_limited', retryAfterS: 120 }, 'ok']);
+    const chain = new FallbackRouting(
+      [{ provider: a, breaker: new CircuitBreaker(2, 60_000, c) }, { provider: fake('b', ['ok']) }],
+      c,
+    );
+    await chain.getRoutes(P, P, { alternatives: 0, signal: signal() });
+    expect(chain.status()[0]?.state).toBe('open');
+    c.t += 90_000;
+    expect(chain.status()[0]?.state).toBe('open');
+    c.t += 31_000;
+    expect(chain.status()[0]?.state).toBe('half-open');
+  });
+
   it('cancelar corta la cadena', async () => {
     const c = new AbortController();
     c.abort();

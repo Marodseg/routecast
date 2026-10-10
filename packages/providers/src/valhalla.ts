@@ -114,6 +114,7 @@ export class ValhallaRouting implements RoutingProvider {
       directions_type: 'maneuvers',
       language: 'es-ES',
     };
+    // GET con ?json= (Valhalla acepta GET y POST): evita el preflight CORS de Content-Type: application/json.
     const url = `${this.#o.baseUrl ?? 'https://valhalla1.openstreetmap.de'}/route?json=${encodeURIComponent(JSON.stringify(body))}`;
     const res = await getJson(url, {
       schema: ValhallaResponse,

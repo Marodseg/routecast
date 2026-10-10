@@ -12,6 +12,7 @@ import {
   relativeLuminance,
   simulateCvd,
   type ThemeColors,
+  toHex,
   tokens,
   tokensToCss,
   toLinearSrgb,
@@ -137,5 +138,14 @@ describe('tokensToCss', () => {
     expect(at(360)).toBeCloseTo(32, 2);
     expect(at(1280)).toBeCloseTo(40, 2);
     expect(fluid(10, 10)).toBe('10px');
+  });
+});
+
+describe('toHex', () => {
+  it('convierte a sRGB con gamma y conserva el alfa', () => {
+    expect(toHex(oklch(1, 0, 0))).toBe('#ffffff');
+    expect(toHex(oklch(0, 0, 0))).toBe('#000000');
+    expect(toHex(oklch(0.62796, 0.25768, 29.2339))).toBe('#ff0000');
+    expect(toHex(oklch(0, 0, 0, 0.5))).toBe('#00000080');
   });
 });

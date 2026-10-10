@@ -11,7 +11,7 @@ Contexto de uso: proyecto personal/portfolio **sin monetización**. Si eso cambi
 |---|---|---|---|---|
 | Open-Meteo | Previsión horaria | No | 600/min, 5.000/h, 10.000/día (por IP) | **No comercial**, atribución CC-BY; CORS abierto |
 | OSRM demo | Rutas + alternativas | No | ~1 req/s, sin SLA | No comercial, User-Agent válido, atribución OSRM/OSM (ODbL) |
-| Valhalla demo (FOSSGIS) | Rutas (alternativa) | No | ~1 req/s por IP, 100 req/s globales | **No para producción**; `X-Client-Id` recomendado |
+| Valhalla demo (FOSSGIS) | Rutas (primario: alternativas reales) | No | Uso justo; ~1 req/s por IP y 100 req/s globales **[NO CONFIRMADO, fuente secundaria]** | Uso razonable no comercial; sin SLA; sin cabecera obligatoria conocida |
 | OpenRouteService | Rutas (fallback vía Worker) | Sí | Directions 2.000/día, 40/min | No comercial; clave solo en Worker |
 | GraphHopper | No usar de entrada | Sí | 500 créditos/día, 5 puntos | No comercial; demasiado limitado |
 | AEMET OpenData | Avisos/predicción España | Sí (gratuita) | Límite por minuto estricto (~80/min observado) | Citar AEMET; clave solo en Worker; caídas intermitentes |
@@ -41,13 +41,26 @@ Contexto de uso: proyecto personal/portfolio **sin monetización**. Si eso cambi
   puertos; pendiente en el adaptador (fase 3) **[VERIFICAR coste en multi-ubicación]**.
 - No ofrece avisos. Sin nowcasting minuto a minuto en el plan gratuito.
 - **El límite es por IP**: llamar desde el navegador (IP de cada usuario). Desde Workers/servidores compartidos se han visto 429 por tráfico ajeno.
-- **[VERIFICAR]** cómo se cuentan las llamadas con muchas ubicaciones en una petición contra el límite diario.
+- **Conteo de llamadas (revisado 2026-10-10, blog de Open-Meteo)**: cada petición pesa ≈ ubicaciones × max(días, 14)/14 × variables/10. Un lote de 50 celdas con 9 variables cuenta ≈ **45 llamadas** contra 600/min, 5.000/h y 10.000/día (≈ 13 lotes/min, ≈ 222 lotes/día). Los docs no fijan máximo de ubicaciones ni de longitud de URL; el proyecto usa lotes ≤ 50 (URL ≈ 0,8 kB) con ≥ 1 s entre lotes y caché por celda de 30 min. La fórmula procede de un blog y sus comentarios **[VERIFICAR con el aviso «equivale a N llamadas» de la página de docs]**. Fuente: https://openmeteo.substack.com/p/weather-data-for-multiple-locations
 - Atribución: enlazar a Open-Meteo (CC-BY 4.0). Plan comercial desde ~29 €/mes (no previsto).
 - Fuentes: https://open-meteo.com/en/terms · https://open-meteo.com/en/docs · https://github.com/open-meteo/open-meteo/discussions/853
 
+### Valhalla demo (FOSSGIS) — revisado 2026-10-10
+- Endpoint: `https://valhalla1.openstreetmap.de/route?json=<URL-encoded>` (GET; también acepta POST). Se usa GET para evitar el preflight CORS.
+- La documentación de Valhalla indica que el demo sigue la política de «uso justo» de los demos de OSRM y Nominatim, con límites de tasa. Las cifras ~1 req/s por usuario y ~100 req/s globales vienen de una fuente secundaria **[NO CONFIRMADO]**; el proyecto aplica ≥ 1 s entre peticiones y circuit breaker (`FallbackRouting`), que respeta `Retry-After`.
+- Términos oficiales de los servidores FOSSGIS (en alemán): https://www.fossgis.de/arbeitsgruppen/osm-server/nutzungsbedingungen/ — no se pudieron leer de forma automática (protección anti-bot) **[VERIFICAR a mano]** si exigen identificación o limitan el uso desde webs de terceros. No se envía `X-Client-Id`: una cabecera propia desde el navegador provoca preflight CORS y no consta como obligatoria.
+- Desde el navegador el sitio solo se identifica por `Origin`/`Referer` (automáticos): la web no debe fijar `Referrer-Policy: no-referrer`.
+- `alternates` puede devolver menos de las pedidas y no se admite con más de 2 ubicaciones. Se piden 0-2 con 2 ubicaciones.
+- Para Málaga → Granada el demo devolvió A-45 · A-92 y A-7 · A-44, mientras que los demos OSRM devolvieron una sola ruta: por eso es el primario.
+- Atribución: «Rutas: Valhalla (FOSSGIS)» cuando la ruta procede de este proveedor; datos © OpenStreetMap contributors (ODbL).
+- Fuentes: https://valhalla.github.io/valhalla/api/turn-by-turn/api-reference/ · https://wiki.openstreetmap.org/wiki/FOSSGIS/Server/Policy
+
 ### OSRM demo
 - `https://router.project-osrm.org/route/v1/driving/{lng,lat;lng,lat}?alternatives=true&geometries=geojson&overview=full&annotations=duration` y `https://routing.openstreetmap.de/routed-car/route/v1/driving/…` (FOSSGIS: usar el prefijo `routed-car`).
-- Máx. 1 req/s; sin garantías de disponibilidad, latencia o datos; puede bloquear por abuso. User-Agent identificable (no falsear otro).
+- Máx. 1 req/s; uso razonable y no comercial; sin garantías de disponibilidad, latencia ni datos; puede bloquear por abuso (wiki Demo-server, revisado 2026-10-10).
+- Política de uso (wiki Api-usage-policy): User-Agent válido que identifique la aplicación y Referer válido cuando se conoce. Desde el navegador no se puede fijar `User-Agent`; se envían `Referer`/`Origin` automáticamente. El script de fixtures (Node) sí fija un UA propio con contacto.
+- `annotation.duration` excluye las penalizaciones de giro: el adaptador las reparte proporcionalmente para que la ETA final cuadre con `duration`.
+- Para Málaga → Granada ambos demos devolvieron una sola ruta pese a `alternatives` (2026-10-10).
 - Mostrar atribución ODbL y fuente de rutas (OSRM). No meter detrás de muro de pago; no vender acceso.
 - `alternatives=true` puede devolver 0-2 alternativas (no garantizado). Para más control: ORS.
 - Fuentes: https://github.com/Project-OSRM/osrm-backend/wiki/Demo-server · https://github.com/Project-OSRM/osrm-backend/wiki/Api-usage-policy
@@ -73,6 +86,7 @@ Contexto de uso: proyecto personal/portfolio **sin monetización**. Si eso cambi
 
 ### Geocodificación
 - **Photon** (`https://photon.komoot.io/api/?q=…`) para autocompletar (debounce ≥ 300 ms, caché, cancelar peticiones obsoletas).
+- Photon `lang`: admite un solo código; si se omite usa `Accept-Language` del navegador. `default` no está documentado, así que no se envía (revisado 2026-10-10, https://github.com/komoot/photon/blob/master/docs/api-v1.md). Sin cifras de límite: «uso razonable», puede limitarse sin aviso.
 - **Nominatim** solo para búsquedas explícitas puntuales, nunca autocompletado; 1 req/s; User-Agent propio.
 - Fuentes: https://operations.osmfoundation.org/policies/nominatim/ · https://photon.komoot.io
 
@@ -98,4 +112,4 @@ Fuentes: https://developers.cloudflare.com/changelog/2026-02-11-subrequests-limi
 VM "Always Free" de Oracle (ARM 4 OCPU / 24 GB) con OSRM o Valhalla sobre extracto de España: sin límites de peticiones, a cambio de mantenimiento, tarjeta de verificación y riesgo de falta de capacidad o reclamación por inactividad. Fuente: https://cnx-software.com/?p=90856
 
 ## Atribuciones obligatorias en el pie de la web
-© OpenStreetMap contributors (ODbL) · OpenFreeMap / OpenMapTiles · Weather data by Open-Meteo.com (CC-BY 4.0) · Routing by OSRM/OpenRouteService · Avisos: AEMET / Meteoalarm (EUMETNET).
+© OpenStreetMap contributors (ODbL) · OpenFreeMap / OpenMapTiles · Weather data by Open-Meteo.com (CC-BY 4.0) · Rutas: Valhalla (FOSSGIS) / OSRM / OpenRouteService (según el proveedor que responda) · Avisos: AEMET / Meteoalarm (EUMETNET).

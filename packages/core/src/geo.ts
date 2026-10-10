@@ -134,3 +134,17 @@ export function smoothedHeadingAt(
   }
   return circularMeanDeg(angles, weights) ?? nearest ?? 0;
 }
+
+/** Trozo de la polilínea entre dos distancias (m), con los extremos interpolados. */
+export function sliceLine(geometry: readonly LatLng[], cum: readonly number[], fromM: number, toM: number): LatLng[] {
+  if (geometry.length === 0) return [];
+  const a = pointAtDistance(geometry, cum, Math.min(fromM, toM));
+  const b = pointAtDistance(geometry, cum, Math.max(fromM, toM));
+  const out: LatLng[] = [a.at];
+  for (let i = a.segment + 1; i <= b.segment; i++) {
+    const p = geometry[i];
+    if (p) out.push(p);
+  }
+  out.push(b.at);
+  return out;
+}

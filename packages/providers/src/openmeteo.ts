@@ -44,6 +44,8 @@ export interface OpenMeteoOptions {
   clock?: Clock;
   /** Reintentos ante 429 (respetando Retry-After, máx. 10 s de espera cada uno). */
   maxRetries?: number;
+  /** Pausa entre lotes: cada lote de 50 celdas pesa ~45 llamadas del límite por IP (PROVIDERS.md). */
+  batchGapMs?: number;
 }
 
 function column(hourly: Record<string, unknown>, key: string, n: number): (number | null)[] {
@@ -92,6 +94,8 @@ export class OpenMeteoWeather implements WeatherProvider {
     const out: HourlyWeather[] = [];
     const clock = this.#o.clock ?? realClock;
     for (let i = 0; i < cells.length; i += MAX_CELLS_PER_REQUEST) {
+      if (i > 0) await clock.sleep(this.#o.batchGapMs ?? 1000, opts.signal);
+      if (opts.signal.aborted) return err({ kind: 'aborted' });
       const batch = cells.slice(i, i + MAX_CELLS_PER_REQUEST);
       const params = new URLSearchParams({
         latitude: batch.map((c) => c.at.lat.toFixed(2)).join(','),

@@ -107,3 +107,20 @@ export function deltaEok(a: Vec3, b: Vec3): number {
   const [l2, a2, b2] = linearSrgbToOklab(b);
   return Math.hypot(l1 - l2, a1 - a2, b1 - b2);
 }
+
+/** sRGB (gamma) en hexadecimal, para APIs que no entienden oklch() (p. ej. estilos de MapLibre). */
+export function toHex(c: Oklch): string {
+  const enc = (v: number) => (v <= 0.0031308 ? 12.92 * v : 1.055 * v ** (1 / 2.4) - 0.055);
+  const hex = toLinearSrgb(c)
+    .map((v) =>
+      Math.round(clamp01(enc(v)) * 255)
+        .toString(16)
+        .padStart(2, '0'),
+    )
+    .join('');
+  return c.alpha === undefined || c.alpha >= 1
+    ? `#${hex}`
+    : `#${hex}${Math.round(c.alpha * 255)
+        .toString(16)
+        .padStart(2, '0')}`;
+}

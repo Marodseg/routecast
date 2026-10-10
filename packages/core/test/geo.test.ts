@@ -8,6 +8,7 @@ import {
   cumulativeDistancesM,
   haversineM,
   pointAtDistance,
+  sliceLine,
   smoothedHeadingAt,
 } from '../src/geo';
 
@@ -169,5 +170,24 @@ describe('casos límite de geometría', () => {
     const cum = cumulativeDistancesM(l);
     expect(smoothedHeadingAt(l, cum, -50_000, 10)).toBeCloseTo(0, 3);
     expect(smoothedHeadingAt(l, cum, 1e9, 10)).toBeCloseTo(0, 3);
+  });
+});
+
+describe('sliceLine', () => {
+  const l = [ll(0, 0), ll(0, 1), ll(0, 2), ll(0, 3)];
+  const cum = cumulativeDistancesM(l);
+  const km1 = (cum[1] ?? 0) / 1;
+
+  it('corta entre dos distancias incluyendo los vértices intermedios', () => {
+    const s = sliceLine(l, cum, km1 * 0.5, km1 * 2.5);
+    expect(s).toHaveLength(4);
+    expect(s[0]?.lng).toBeCloseTo(0.5, 6);
+    expect(s[1]).toEqual(ll(0, 1));
+    expect(s.at(-1)?.lng).toBeCloseTo(2.5, 6);
+  });
+
+  it('acepta los límites al revés y vacía si no hay geometría', () => {
+    expect(sliceLine(l, cum, km1 * 2, km1)).toEqual(sliceLine(l, cum, km1, km1 * 2));
+    expect(sliceLine([], [], 0, 1)).toEqual([]);
   });
 });
