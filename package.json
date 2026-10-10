@@ -6,7 +6,7 @@
   "type": "module",
   "packageManager": "pnpm@10.31.0",
   "engines": {
-    "node": ">=22"
+    "node": ">=24"
   },
   "scripts": {
     "dev": "pnpm -r --parallel --filter @routecast/web --filter @routecast/worker dev",
@@ -26,6 +26,7 @@
     "@size-limit/file": "14.2.0",
     "@types/node": "^26.6.5",
     "@vitest/coverage-v8": "5.0.3",
+    "fast-check": "4.10.2",
     "size-limit": "14.2.0",
     "typescript": "7.0.2",
     "vitest": "5.0.3"

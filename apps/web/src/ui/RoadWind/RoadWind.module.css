@@ -1,0 +1,94 @@
+.figure {
+  display: inline-grid;
+  justify-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  --rw-cross: var(--ink);
+}
+
+.figure[data-level="1"] {
+  --rw-cross: var(--risk-1);
+}
+.figure[data-level="2"] {
+  --rw-cross: var(--risk-2);
+}
+.figure[data-level="3"] {
+  --rw-cross: var(--risk-3);
+}
+
+.svg {
+  overflow: visible;
+}
+
+.ring {
+  fill: var(--surface-sunken);
+  stroke: var(--rule-strong);
+}
+.tick {
+  stroke: var(--ink-subtle);
+  stroke-width: 1;
+}
+.north {
+  font: 600 9px var(--font-mono);
+  fill: var(--accent-ink);
+}
+
+.road {
+  transform-box: view-box;
+  transform-origin: 60px 60px;
+  transition: transform var(--duration-slow) var(--ease-out);
+}
+
+.roadBand {
+  stroke: var(--ink-muted);
+  stroke-width: 10;
+}
+.roadCenter {
+  stroke: var(--surface);
+  stroke-width: 1.2;
+  stroke-dasharray: 3 3;
+}
+.roadArrow {
+  fill: none;
+  stroke: var(--surface);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.cross {
+  stroke: var(--rw-cross);
+  stroke-width: 4.5;
+  stroke-linecap: round;
+  /* Halo para que el vector se lea sobre la carretera en cualquier color de riesgo. */
+  paint-order: stroke;
+  filter: drop-shadow(0 0 0.6px var(--route-casing));
+}
+
+.crossEnd {
+  fill: var(--rw-cross);
+  stroke: var(--route-casing);
+  stroke-width: 1;
+}
+.wind {
+  stroke: var(--ink);
+  stroke-width: 1.6;
+}
+.windHead {
+  fill: var(--ink);
+}
+
+.readout {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  font-size: var(--text-sm);
+}
+
+.readout b {
+  font-size: var(--text-lg);
+  font-weight: 600;
+}
+.secondary {
+  color: var(--ink-muted);
+}

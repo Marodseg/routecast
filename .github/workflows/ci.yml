@@ -32,6 +32,14 @@ jobs:
       - name: Install Playwright browsers
         run: pnpm --filter @routecast/web exec playwright install --with-deps chromium
       - run: pnpm test:e2e
+      - name: Upload new visual baselines (linux)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots-linux
+          path: apps/web/e2e/__screenshots__/linux
+          if-no-files-found: ignore
+          retention-days: 7
       - name: Upload Playwright report
         if: failure()
         uses: actions/upload-artifact@v4

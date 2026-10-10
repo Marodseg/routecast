@@ -1,0 +1,167 @@
+.dial {
+  position: relative;
+  background-color: var(--surface);
+  padding: var(--space-3) var(--space-3) var(--space-2);
+  user-select: none;
+  -webkit-user-select: none;
+  container-type: inline-size;
+}
+
+.disabled {
+  opacity: 0.55;
+}
+
+.top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.now {
+  min-height: 32px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-m);
+  background: none;
+  font: 500 var(--text-xs) / 1 var(--font-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  transition: background-color var(--duration-fast) var(--ease-out);
+}
+
+.now:hover:not(:disabled) {
+  background: var(--surface-sunken);
+}
+.now:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.face {
+  position: relative;
+  cursor: grab;
+  touch-action: pan-y;
+  outline-offset: 4px;
+  border-radius: var(--radius-m);
+}
+
+.dragging {
+  cursor: grabbing;
+}
+
+.svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.rotor {
+  transform-box: view-box;
+  transition: transform var(--duration) var(--ease-out);
+  will-change: transform;
+}
+
+/* Durante arrastre e inercia la rotación sigue al dedo sin interpolar. */
+.free {
+  transition: none;
+}
+
+.minor {
+  stroke: var(--ink-subtle);
+  stroke-width: 1;
+}
+.half {
+  stroke: var(--ink-muted);
+  stroke-width: 1.2;
+}
+.major {
+  stroke: var(--ink);
+  stroke-width: 1.6;
+}
+.hour {
+  font: 500 11px var(--font-mono);
+  fill: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.band {
+  opacity: 0.35;
+  transition: opacity var(--duration) var(--ease-out);
+}
+.bandSelected {
+  opacity: 1;
+}
+.bandSeg {
+  fill: none;
+  stroke: var(--surface-sunken);
+  transition: stroke var(--duration) var(--ease-out);
+}
+.bandSeg[data-level="0"] {
+  stroke: var(--risk-0);
+}
+.bandSeg[data-level="1"] {
+  stroke: var(--risk-1);
+}
+.bandSeg[data-level="2"] {
+  stroke: var(--risk-2);
+}
+.bandSeg[data-level="3"] {
+  stroke: var(--risk-3);
+}
+.bandPattern {
+  fill: none;
+}
+.pat {
+  fill: var(--risk-pattern);
+}
+
+.key {
+  font: 600 9px var(--font-mono);
+  fill: var(--ink-subtle);
+}
+.keySelected {
+  fill: var(--ink);
+}
+
+.needle {
+  stroke: var(--accent);
+  stroke-width: 2.5;
+}
+.needleHead {
+  fill: var(--accent);
+}
+.nowDot {
+  fill: var(--accent);
+}
+
+.fade {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(90deg, var(--surface), transparent 16%, transparent 84%, var(--surface));
+}
+
+.readout {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  text-align: center;
+  pointer-events: none;
+}
+
+.time {
+  font: 600 40px / 1 var(--font-mono);
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+.delta {
+  margin-top: 4px;
+  font: 500 var(--text-xs) / 1 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}

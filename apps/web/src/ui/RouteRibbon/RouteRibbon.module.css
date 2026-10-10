@@ -1,0 +1,94 @@
+.ribbon {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.land {
+  fill: var(--land);
+}
+.contour {
+  fill: none;
+  stroke: color-mix(in oklch, var(--ink) 11%, transparent);
+  stroke-width: 1;
+}
+.alt {
+  fill: none;
+  stroke: var(--ink-subtle);
+  stroke-width: 2;
+  stroke-dasharray: 1 5;
+  stroke-linecap: round;
+}
+.casing {
+  fill: none;
+  stroke: var(--route-casing);
+  stroke-width: 14;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.seg,
+.segPattern {
+  fill: none;
+  stroke-width: 9;
+  stroke-linecap: butt;
+  transition: stroke var(--duration) var(--ease-out);
+}
+
+.seg {
+  stroke: var(--surface-sunken);
+}
+.seg[data-level="0"] {
+  stroke: var(--risk-0);
+}
+.seg[data-level="1"] {
+  stroke: var(--risk-1);
+}
+.seg[data-level="2"] {
+  stroke: var(--risk-2);
+}
+.seg[data-level="3"] {
+  stroke: var(--risk-3);
+}
+.pat {
+  fill: var(--risk-pattern);
+}
+
+.tick {
+  stroke: var(--ink);
+  stroke-width: 1.4;
+}
+
+.tickLabel,
+.place,
+.placeMajor {
+  paint-order: stroke;
+  stroke: var(--land);
+  stroke-width: 3.5px;
+  stroke-linejoin: round;
+}
+
+.tickLabel {
+  font: 600 10.5px var(--font-mono);
+  fill: var(--ink);
+}
+.place {
+  font: italic 500 12.5px var(--font-display);
+  fill: var(--ink-muted);
+}
+.placeMajor {
+  font: 700 13px var(--font-display);
+  fill: var(--ink);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.dot {
+  fill: var(--land);
+  stroke: var(--ink-muted);
+  stroke-width: 1.4;
+}
+.dotMajor {
+  fill: var(--accent);
+  stroke: var(--ink);
+  stroke-width: 1.4;
+}

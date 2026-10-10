@@ -1,0 +1,146 @@
+.compare {
+  --cols: minmax(0, 1fr) 4.4rem 6.4rem 3.4rem;
+  container-type: inline-size;
+}
+
+.head {
+  display: grid;
+  grid-template-columns: var(--cols);
+  gap: var(--space-2);
+  padding: 0 0 var(--space-2);
+  border-bottom: 1px solid var(--ink);
+}
+
+.head > :not(:first-child) {
+  text-align: right;
+}
+
+.item {
+  border-bottom: 1px solid var(--rule);
+  animation: enter var(--duration-slow) var(--ease-out) both;
+  animation-delay: calc(var(--i) * var(--stagger));
+}
+
+@keyframes enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+.row {
+  display: grid;
+  grid-template-columns: var(--cols);
+  gap: 6px var(--space-2);
+  align-items: baseline;
+  width: calc(100% + var(--space-4));
+  margin: 0 calc(var(--space-2) * -1);
+  padding: var(--space-3) var(--space-2);
+  border: 0;
+  background: none;
+  text-align: left;
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+}
+
+.row:hover {
+  background: var(--surface-sunken);
+}
+
+.selected,
+.selected:hover {
+  background: var(--ink);
+  color: var(--surface);
+}
+
+.name {
+  display: flex;
+  gap: var(--space-2);
+  align-items: baseline;
+  min-width: 0;
+}
+
+.id {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  flex: none;
+  border: 1px solid currentColor;
+  font: 700 var(--text-sm) / 1 var(--font-mono);
+}
+
+.roads {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 600 var(--text-lg) / 1.15 var(--font-display);
+}
+
+.num {
+  text-align: right;
+  white-space: nowrap;
+  font: 500 var(--text-md) / 1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.num small {
+  font-size: var(--text-xs);
+}
+.risk {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.sub {
+  grid-column: 1 / -1;
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+  margin-top: -2px;
+}
+.profile {
+  grid-column: 1 / -1;
+  display: block;
+  margin-top: 4px;
+}
+.worst {
+  grid-column: 1 / -1;
+  font: 400 var(--text-sm) / 1.4 var(--font-mono);
+  color: var(--ink-muted);
+}
+
+.selected .sub,
+.selected .worst {
+  color: color-mix(in oklch, var(--surface) 75%, transparent);
+}
+
+.selected .risk :global(svg) {
+  color: inherit;
+}
+
+/* Estrecho: nombre en su línea y tres lecturas en columnas alineadas con la cabecera. */
+@container (max-width: 440px) {
+  .head,
+  .row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .head > :first-child {
+    display: none;
+  }
+
+  .head > :not(:first-child),
+  .num {
+    text-align: left;
+  }
+
+  .risk {
+    justify-content: flex-start;
+  }
+
+  .name {
+    grid-column: 1 / -1;
+    margin-bottom: 2px;
+  }
+}

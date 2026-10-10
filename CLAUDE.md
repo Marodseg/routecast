@@ -29,7 +29,7 @@ animación con propósito y componentes memorables. `docs/DESIGN.md` manda en cu
 ## Estructura del monorepo (objetivo)
 
 ```
-apps/web        Vite + TypeScript + MapLibre (UI)
+apps/web        Vite + TypeScript + Solid + MapLibre (UI); galería en /dev/gallery
 apps/worker     Cloudflare Worker (Hono): claves, caché, avisos, rate limiting
 packages/core   Lógica pura SIN red ni DOM: muestreo, ETA, viento cruzado, scoring
 packages/providers  Adaptadores: Open-Meteo, OSRM, ORS, Valhalla, AEMET, Meteoalarm, Photon
@@ -39,7 +39,7 @@ docs/           SPEC, ARCHITECTURE, PROVIDERS, ROADMAP, ADRs
 
 ## Stack (decidido, ver ADR-0001)
 
-pnpm workspaces · TypeScript `strict` · Vite · MapLibre GL + OpenFreeMap · Hono en Workers ·
+pnpm workspaces · TypeScript `strict` · Vite · **Solid** + CSS Modules (ADR-0007) · MapLibre GL + OpenFreeMap · Hono en Workers ·
 Zod para validar TODA respuesta externa · Vitest · Playwright · Biome (lint+format) ·
 GitHub Actions · Wrangler.
 
@@ -58,6 +58,10 @@ pnpm build          # vite build (web) + wrangler deploy --dry-run (worker)
 pnpm size           # size-limit sobre apps/web/dist (requiere build)
 pnpm --filter @routecast/web exec playwright install chromium   # primera vez
 ```
+
+Galería de componentes: `pnpm dev` → http://localhost:5173/dev/gallery/ (también se publica en Pages).
+Capturas de regresión: `apps/web/e2e/__screenshots__/{plataforma}/`; tras un cambio visual intencionado,
+`pnpm --filter @routecast/web exec playwright test --update-snapshots -g visual`.
 
 Notas: los paquetes exportan su `src/index.ts` directamente (sin paso de build). Las fronteras `core`/`shared`/`providers`
 se imponen con Biome (`biome.json` → `overrides`), no con dependency-cruiser (no soporta Node impar local).
