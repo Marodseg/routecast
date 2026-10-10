@@ -39,5 +39,3 @@ jobs:
           name: playwright-report
           path: apps/web/playwright-report
           retention-days: 7
-      - name: Audit dependencies
-        run: pnpm audit --prod --audit-level high

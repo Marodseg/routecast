@@ -35,6 +35,12 @@ pnpm build
 pnpm size         # presupuesto de bundle
 ```
 
+## Despliegue
+
+- **Web**: `deploy-web.yml` publica `apps/web` en GitHub Pages en cada push a `main`. Protege `main` exigiendo el
+  check de CI para que nunca se despliegue algo en rojo.
+- **Worker**: pendiente (fase 4).
+
 ## Fuentes de datos
 
 © OpenStreetMap contributors (ODbL) · OpenFreeMap / OpenMapTiles · Weather data by Open-Meteo.com (CC-BY 4.0) ·

@@ -10,6 +10,7 @@
       "**",
       "!**/routecast-kit",
       "!**/.vscode",
+      "!**/design/prototypes",
       "!**/pnpm-lock.yaml",
       "!**/.wrangler",
       "!**/dist",
@@ -75,7 +76,11 @@
                   "Date": "core es puro: el reloj se inyecta como UnixMs (ADR-0005).",
                   "performance": "core es puro: el reloj se inyecta (ADR-0005).",
                   "setTimeout": "core es puro y síncrono (ADR-0005).",
-                  "setInterval": "core es puro y síncrono (ADR-0005)."
+                  "setInterval": "core es puro y síncrono (ADR-0005).",
+                  "process": "core es puro: sin entorno de ejecución (ADR-0005).",
+                  "globalThis": "core es puro: sin acceso a globales del entorno (ADR-0005).",
+                  "self": "core es puro: sin acceso a globales del entorno (ADR-0005).",
+                  "crypto": "core es determinista: sin aleatoriedad (ADR-0005)."
                 }
               }
             },
@@ -84,7 +89,16 @@
               "options": {
                 "patterns": [
                   {
-                    "group": ["**", "!@routecast/shared", "!./**", "!../**"],
+                    "group": [
+                      "**",
+                      "!@routecast/shared",
+                      "!./**",
+                      "!../**",
+                      "../**/providers/**",
+                      "../**/apps/**",
+                      "../**/web/**",
+                      "../**/worker/**"
+                    ],
                     "message": "core es puro: solo puede importar @routecast/shared y sus propios módulos (ADR-0005)."
                   }
                 ]
@@ -104,7 +118,17 @@
               "options": {
                 "patterns": [
                   {
-                    "group": ["**", "!zod", "!./**", "!../**"],
+                    "group": [
+                      "**",
+                      "!zod",
+                      "!./**",
+                      "!../**",
+                      "../**/core/**",
+                      "../**/providers/**",
+                      "../**/apps/**",
+                      "../**/web/**",
+                      "../**/worker/**"
+                    ],
                     "message": "shared solo depende de zod (ARCHITECTURE §2)."
                   }
                 ]
@@ -124,7 +148,17 @@
               "options": {
                 "patterns": [
                   {
-                    "group": ["**", "!zod", "!@routecast/shared", "!./**", "!../**"],
+                    "group": [
+                      "**",
+                      "!zod",
+                      "!@routecast/shared",
+                      "!./**",
+                      "!../**",
+                      "../**/core/**",
+                      "../**/apps/**",
+                      "../**/web/**",
+                      "../**/worker/**"
+                    ],
                     "message": "providers solo conoce shared y zod (ARCHITECTURE §2)."
                   }
                 ]
