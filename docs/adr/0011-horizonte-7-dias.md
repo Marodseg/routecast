@@ -18,8 +18,15 @@ por defecto (máximo 16) sin coste extra apreciable en la cuota (PROVIDERS.md).
   - en la nota de confianza baja del core.
 - Avisos oficiales: con una salida a más de 48 h, una lista vacía no se presenta como «sin avisos». Se explica que aún
   no suelen publicarse.
-- Caché: una serie guardada solo vale si llega al fin del horizonte. Si no llega, se vuelve a pedir, y se usa como
-  respaldo si la petición falla.
+- Previsión en **dos fases**. Con carga, la latencia de Open-Meteo crece con celdas × días: 20 celdas tardaron 13 s con
+  3 días y 28 s con 7 (medido el 2026-10-11).
+  - Fase 1: solo los días que necesita la salida elegida más la ruta más larga, normalmente 1-2. Con eso salen los
+    resultados.
+  - Fase 2: el resto de la semana, en segundo plano. Sirve para las bandas del dial y para los otros días.
+  - Si eliges un día que aún no ha llegado, se muestra «Calculando…» y no «sin datos». Si la fase 2 falló, se
+    reintenta al elegir ese día.
+- Una serie guardada más corta que el horizonte sigue valiendo para la salida que cubre y queda de respaldo si la red
+  falla.
 - Las bandas del dial (peor nivel por hora de salida, unas 170 horas por ruta) se calculan a trozos de unos 12 ms, primero
   las horas visibles, para no bloquear el hilo principal.
 
