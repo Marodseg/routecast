@@ -130,6 +130,11 @@ describe('fetchAemetArea (dos pasos, MSW)', () => {
       ok: false,
       error: { kind: 'rate_limited' },
     });
+    server.use(
+      http.get(META, () => HttpResponse.json({ estado: 200, datos: 'http://opendata.aemet.es/opendata/sh/x' })),
+    );
+    const insecure = await fetchAemetArea('64', { apiKey: 'k' }, signal());
+    expect(insecure.ok === false && insecure.error.kind).toBe('bad_response');
     server.use(http.get(META, () => HttpResponse.json({ estado: 200, datos: 'https://evil.example/x' })));
     const r = await fetchAemetArea('64', { apiKey: 'k' }, signal());
     expect(r.ok === false && r.error.kind).toBe('bad_response');
@@ -181,6 +186,26 @@ describe('OrsRouting (fixture real)', () => {
       expect(route.cumDurationS).toHaveLength(route.geometry.length);
       expect(Math.abs((route.cumDurationS.at(-1) ?? 0) - route.durationS)).toBeLessThan(2);
     }
+  });
+
+  it('si ORS rechaza las alternativas por distancia (2004), reintenta sin ellas', async () => {
+    const bodies: unknown[] = [];
+    server.use(
+      http.post(URL_, async ({ request }) => {
+        const b = (await request.json()) as { alternative_routes?: unknown };
+        bodies.push(b.alternative_routes);
+        if (b.alternative_routes) return HttpResponse.json({ error: { code: 2004 } }, { status: 400 });
+        return HttpResponse.json(fixture('ors-malaga-granada.json'));
+      }),
+    );
+    const r = await new OrsRouting({ apiKey: 'k' }).getRoutes(
+      { lat: 36.7, lng: -4.4 },
+      { lat: 43.3, lng: -2.9 },
+      { alternatives: 2, signal: signal() },
+    );
+    expect(r.ok).toBe(true);
+    expect(bodies).toHaveLength(2);
+    expect(bodies[1]).toBeUndefined();
   });
 
   it('código 2009 (sin ruta) → no_route', async () => {

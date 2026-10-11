@@ -30,11 +30,16 @@ self.addEventListener('fetch', (event) => {
   if (url.origin !== self.location.origin) return;
 
   if (req.mode === 'navigate') {
+    const scope = new URL('./', self.location).pathname;
+    const isShell = url.pathname === scope || url.pathname === `${scope}index.html`;
     event.respondWith(
       fetch(req)
         .then((res) => {
-          const copy = res.clone();
-          caches.open(VERSION).then((c) => c.put('./index.html', copy));
+          // Solo la portada de la app se guarda como shell: ni la galería ni un 404 ni una redirección.
+          if (isShell && res.ok && res.type === 'basic') {
+            const copy = res.clone();
+            event.waitUntil(caches.open(VERSION).then((c) => c.put('./index.html', copy)));
+          }
           return res;
         })
         .catch(() => caches.match('./index.html')),
@@ -50,7 +55,7 @@ self.addEventListener('fetch', (event) => {
           fetch(req).then((res) => {
             if (res.ok) {
               const copy = res.clone();
-              caches.open(VERSION).then((c) => c.put(req, copy));
+              event.waitUntil(caches.open(VERSION).then((c) => c.put(req, copy)));
             }
             return res;
           }),

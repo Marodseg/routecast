@@ -45,10 +45,10 @@ function csp(): Plugin {
         "form-action 'none'",
         "object-src 'none'",
       ].join('; ');
-      return html.replace(
-        '<meta charset="UTF-8" />',
-        `<meta charset="UTF-8" />\n    <meta http-equiv="Content-Security-Policy" content="${policy}" />`,
-      );
+      const anchor = '<meta charset="UTF-8" />';
+      // Fail-closed: sin el ancla el build se detiene en vez de publicar sin CSP.
+      if (!html.includes(anchor)) throw new Error('CSP: no se encontró <meta charset> en el HTML');
+      return html.replace(anchor, `${anchor}\n    <meta http-equiv="Content-Security-Policy" content="${policy}" />`);
     },
   };
 }

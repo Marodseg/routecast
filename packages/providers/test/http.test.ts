@@ -1,7 +1,7 @@
 import { delay, HttpResponse, http } from 'msw';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import { getJson, parseRetryAfter } from '../src/http';
+import { getBytes, getJson, parseRetryAfter } from '../src/http';
 import { server, signal } from './setup';
 
 const URL_ = 'https://api.test/x';
@@ -86,6 +86,14 @@ describe('getJson', () => {
     const p = getJson(URL_, { schema, signal: c.signal });
     setTimeout(() => c.abort(), 20);
     expect(await p).toEqual({ ok: false, error: { kind: 'aborted' } });
+  });
+
+  it('getBytes corta respuestas que superan el máximo (por cabecera o leyendo en streaming)', async () => {
+    server.use(http.get(URL_, () => new HttpResponse(new Uint8Array(2000))));
+    const r = await getBytes(URL_, { signal: signal(), maxBytes: 1000 });
+    expect(r.ok === false && r.error.kind).toBe('bad_response');
+    const okRes = await getBytes(URL_, { signal: signal(), maxBytes: 5000 });
+    expect(okRes.ok && okRes.value.byteLength).toBe(2000);
   });
 
   it('error de red → unavailable', async () => {

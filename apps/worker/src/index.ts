@@ -26,6 +26,10 @@ export type Env = {
 
 const UA = 'Routecast/0.1 (proyecto personal no comercial; ver README del repositorio routecast)';
 const WARNINGS_TTL_S = 600;
+/** Comunidades de AEMET por consulta: acota CPU (10 ms en el plan gratuito) y subrequests. */
+const MAX_AREAS = 4;
+/** Tope diario propio de ORS por isolate/centro de datos (cuota oficial 2.000/día): best-effort, ver PROVIDERS.md. */
+const ORS_DAILY_CAP = 1500;
 const ROUTE_TTL_S = 3600;
 /** Caja que contiene España peninsular, Baleares, Canarias, Ceuta y Melilla. */
 const SPAIN: BBoxTuple = [-19, 27, 5, 44.5];
@@ -60,17 +64,19 @@ export function createApp(cache: TtlCache = createCache()) {
   // Rate limiting best-effort por IP (el binding es local a cada ubicación y aproximado).
   app.use('/api/*', async (c, next) => {
     if (c.env.RATE_LIMITER && c.req.path !== '/api/health') {
-      const key = c.req.header('CF-Connecting-IP') ?? 'anon';
-      const { success } = await c.env.RATE_LIMITER.limit({ key });
-      if (!success) return c.json({ error: 'rate_limited' }, 429, { 'Retry-After': '60' });
+      // Sin IP (solo en local) no se limita: una clave compartida dejaría a todos sin servicio.
+      const key = c.req.header('CF-Connecting-IP');
+      if (key) {
+        const { success } = await c.env.RATE_LIMITER.limit({ key });
+        if (!success) return c.json({ error: 'rate_limited' }, 429, { 'Retry-After': '60' });
+      }
     }
     c.set('cache', cache);
     await next();
   });
 
-  app.get('/api/health', (c) =>
-    c.json({ ok: true, service: 'routecast-api', aemet: !!c.env.AEMET_API_KEY, ors: !!c.env.ORS_API_KEY }),
-  );
+  // Salud mínima: no se revela qué claves hay configuradas.
+  app.get('/api/health', (c) => c.json({ ok: true, service: 'routecast-api' }));
 
   app.get('/api/warnings', (c) => warnings(c));
   app.get('/api/route', (c) => route(c));
@@ -99,6 +105,9 @@ const WarningsQuery = z.object({
 });
 
 type SourceStatus = 'ok' | 'error' | 'skipped';
+type WarningsResult = { ok: true; value: Warning[] } | { ok: false; error: ProviderError };
+/** Peticiones en curso por clave: varias consultas simultáneas comparten una sola descarga. */
+const inflight = new Map<string, Promise<WarningsResult>>();
 
 async function warnings(c: Context<AppEnv>) {
   const q = WarningsQuery.safeParse(c.req.query());
@@ -109,17 +118,27 @@ async function warnings(c: Context<AppEnv>) {
   const to = q.data.to ?? now + 72 * 3_600_000;
   const cache = c.get('cache');
   const signal = AbortSignal.timeout(20_000);
-  const areas = areasForBBox(bbox).slice(0, 8);
+  const areas = areasForBBox(bbox).slice(0, MAX_AREAS);
 
-  const fromCache = async (
-    key: string,
-    load: () => Promise<{ ok: true; value: Warning[] } | { ok: false; error: ProviderError }>,
-  ) => {
-    const hit = await cache.get<Warning[]>(key);
-    if (hit) return { ok: true as const, value: hit };
-    const res = await load();
-    if (res.ok) await cache.set(key, res.value, WARNINGS_TTL_S);
-    return res;
+  const fromCache = (key: string, load: () => Promise<WarningsResult>): Promise<WarningsResult> => {
+    const pending = inflight.get(key);
+    if (pending) return pending;
+    const p = (async (): Promise<WarningsResult> => {
+      const hit = await cache.get<Warning[]>(key);
+      if (hit) return { ok: true, value: hit };
+      // Caché negativa: si la fuente acaba de fallar, no se insiste en cada petición (el 429 es un estado normal).
+      const failed = await cache.get<ProviderError>(`${key}:err`);
+      if (failed) return { ok: false, error: failed };
+      const res = await load();
+      if (res.ok) await cache.set(key, res.value, WARNINGS_TTL_S);
+      else if (res.error.kind !== 'aborted') {
+        const wait = res.error.kind === 'rate_limited' ? Math.min(300, res.error.retryAfterS ?? 60) : 60;
+        await cache.set(`${key}:err`, res.error, wait);
+      }
+      return res;
+    })();
+    inflight.set(key, p);
+    return p.finally(() => inflight.delete(key));
   };
 
   const aemetKey = c.env.AEMET_API_KEY;
@@ -181,15 +200,24 @@ async function route(c: Context<AppEnv>) {
   if (!key) return c.json({ error: 'unavailable' }, 503);
   const q = RouteQuery.safeParse(c.req.query());
   if (!q.success) return c.json({ error: 'bad_request' }, 400);
-  const { from, to, alt } = q.data;
+  // Redondeo a ~11 m: la petición y la clave de caché coinciden y la caché sirve de verdad.
+  const r4 = (p: { lat: number; lng: number }) => ({ lat: Number(p.lat.toFixed(4)), lng: Number(p.lng.toFixed(4)) });
+  const from = r4(q.data.from);
+  const to = r4(q.data.to);
+  const alt = q.data.alt;
   const inSpain = (p: { lat: number; lng: number }) => bboxIntersects([p.lng, p.lat, p.lng, p.lat], SPAIN);
   if (!inSpain(from) || !inSpain(to)) return c.json({ error: 'out_of_coverage' }, 400);
 
-  const r4 = (n: number) => n.toFixed(4);
-  const cacheKey = `route:${r4(from.lat)},${r4(from.lng)};${r4(to.lat)},${r4(to.lng)};${alt}`;
+  const cacheKey = `route:${from.lat},${from.lng};${to.lat},${to.lng};${alt}`;
   const cache = c.get('cache');
   const hit = await cache.get<Route[]>(cacheKey);
   if (hit) return c.json({ routes: hit }, 200, { 'Cache-Control': 'public, max-age=600' });
+
+  // Tope diario propio, por debajo de la cuota oficial: aproximado (la caché no es global), ver PROVIDERS.md.
+  const dayKey = `ors:count:${new Date().toISOString().slice(0, 10)}`;
+  const used = (await cache.get<number>(dayKey)) ?? 0;
+  if (used >= ORS_DAILY_CAP) return c.json({ error: 'unavailable' }, 503);
+  await cache.set(dayKey, used + 1, 86_400);
 
   const res = await new OrsRouting({ apiKey: key }).getRoutes(from, to, {
     alternatives: alt,

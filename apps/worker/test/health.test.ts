@@ -52,7 +52,7 @@ describe('worker: salud, CORS y método', () => {
     const res = await get('/api/health');
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body).toEqual({ ok: true, service: 'routecast-api', aemet: true, ors: true });
+    expect(body).toEqual({ ok: true, service: 'routecast-api' });
     const leaky = await get('/api/health', env({ AEMET_API_KEY: 'SECRETO-AEMET-123', ORS_API_KEY: 'SECRETO-ORS-456' }));
     expect(await leaky.text()).not.toMatch(/SECRETO/);
   });
@@ -81,6 +81,7 @@ describe('worker: salud, CORS y método', () => {
     const res = await get(
       '/api/warnings?bbox=2,39,3,40',
       env({ RATE_LIMITER: { limit: async () => ({ success: false }) } }),
+      { Origin: ORIGIN, 'CF-Connecting-IP': '203.0.113.7' },
     );
     expect(res.status).toBe(429);
     expect(res.headers.get('retry-after')).toBe('60');
@@ -112,6 +113,21 @@ describe('worker: /api/warnings', () => {
     await a.request(`/api/warnings?${MALLORCA}`, { headers: { Origin: ORIGIN } }, env());
     await a.request(`/api/warnings?${MALLORCA}`, { headers: { Origin: ORIGIN } }, env());
     expect(calls.meta).toBe(1);
+  });
+
+  it('caché negativa: con AEMET caído, la segunda consulta no vuelve a llamarle', async () => {
+    let meta = 0;
+    server.use(
+      http.get(META, () => {
+        meta++;
+        return new HttpResponse(null, { status: 503 });
+      }),
+    );
+    atomOk();
+    const a = app();
+    await a.request(`/api/warnings?${MALLORCA}`, { headers: { Origin: ORIGIN } }, env());
+    await a.request(`/api/warnings?${MALLORCA}`, { headers: { Origin: ORIGIN } }, env());
+    expect(meta).toBe(1);
   });
 
   it('AEMET caído → solo Meteoalarm con partial: true', async () => {
@@ -173,6 +189,25 @@ describe('worker: /api/route (ORS)', () => {
     expect(body.routes[0]?.provider).toBe('ors');
     await a.request(q, { headers: { Origin: ORIGIN } }, env());
     expect(calls).toBe(1);
+  });
+
+  it('tope diario propio de ORS: al alcanzarlo responde 503 sin llamar a ORS', async () => {
+    let calls = 0;
+    server.use(
+      http.post(ORS, () => {
+        calls++;
+        return HttpResponse.json(JSON.parse(raw('ors-malaga-granada.json').toString('utf8')));
+      }),
+    );
+    const cache = createCache(Date.now, undefined);
+    await cache.set(`ors:count:${new Date().toISOString().slice(0, 10)}`, 1500, 3600);
+    const res = await createApp(cache).request(
+      '/api/route?from=36.7,-4.4&to=37.1,-3.6',
+      { headers: { Origin: ORIGIN } },
+      env(),
+    );
+    expect(res.status).toBe(503);
+    expect(calls).toBe(0);
   });
 
   it('sin clave → 503; fuera de cobertura o mal formado → 400; sin ruta → 404', async () => {

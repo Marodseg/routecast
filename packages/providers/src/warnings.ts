@@ -44,14 +44,21 @@ export async function fetchAemetArea(area: string, o: AemetOptions, signal: Abor
   if (meta.value.estado === 429) return err({ kind: 'rate_limited' });
   if (!meta.value.datos) return err({ kind: 'unavailable', status: meta.value.estado ?? 0 });
   // La URL de datos la da AEMET: solo se sigue si apunta a su propio dominio.
-  if (new URL(meta.value.datos).hostname !== 'opendata.aemet.es')
+  let dataUrl: URL;
+  try {
+    dataUrl = new URL(meta.value.datos);
+  } catch {
+    return err({ kind: 'bad_response', detail: 'URL de datos no válida' });
+  }
+  if (dataUrl.protocol !== 'https:' || dataUrl.hostname !== 'opendata.aemet.es')
     return err({ kind: 'bad_response', detail: 'URL de datos inesperada' });
 
-  const tar = await getBytes(meta.value.datos, {
+  const tar = await getBytes(dataUrl.href, {
     signal,
     timeoutMs: o.timeoutMs ?? 10_000,
     maxBytes: 5_000_000,
-    ...(o.userAgent ? { init: { headers: { 'User-Agent': o.userAgent } } } : {}),
+    // Sin redirecciones: la URL ya se ha comprobado y no debe poder llevar a otro sitio.
+    init: { redirect: 'error', ...(o.userAgent ? { headers: { 'User-Agent': o.userAgent } } : {}) },
     ...(o.fetchImpl ? { fetchImpl: o.fetchImpl } : {}),
   });
   if (!tar.ok) return tar;

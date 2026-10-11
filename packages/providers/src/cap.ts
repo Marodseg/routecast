@@ -48,6 +48,9 @@ const param = (s: string, name: string): string | undefined =>
 
 function decodeXml(s: string): string {
   return s
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
+    .replace(/&#x([0-9a-f]{1,6});/gi, (_, h: string) => String.fromCodePoint(Number.parseInt(h, 16)))
+    .replace(/&#(\d{1,7});/g, (_, d: string) => String.fromCodePoint(Number(d)))
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')

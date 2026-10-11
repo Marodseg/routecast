@@ -23,9 +23,9 @@ export function createCache(
       try {
         const res = await edge.match(CACHE_HOST + encodeURIComponent(key));
         if (!res) return undefined;
-        const body = (await res.json()) as { exp: number; value: T };
-        if (body.exp <= now()) return undefined;
-        mem.set(key, body);
+        const body = (await res.json()) as { exp?: unknown; value?: T };
+        if (typeof body.exp !== 'number' || body.exp <= now() || body.value === undefined) return undefined;
+        mem.set(key, { exp: body.exp, value: body.value });
         return body.value;
       } catch {
         return undefined;

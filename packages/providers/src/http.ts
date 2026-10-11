@@ -112,16 +112,37 @@ export async function getBytes(url: string, o: GetBytesOptions): Promise<Result<
     }
     if (res.status >= 500) return err({ kind: 'unavailable', status: res.status });
     if (res.status >= 400) return err({ kind: 'bad_response', detail: `HTTP ${res.status}` });
-    let buf: ArrayBuffer;
+    const max = o.maxBytes ?? Number.POSITIVE_INFINITY;
+    const declared = Number(res.headers.get('content-length'));
+    const tooBig = (n: number): Result<never> =>
+      err({ kind: 'bad_response', detail: `respuesta de más de ${max} B (${n} B)` });
+    if (Number.isFinite(declared) && declared > max) return tooBig(declared);
+    // Lectura en streaming con contador: un cuerpo desmesurado se corta sin cargarlo entero en memoria.
+    const chunks: Uint8Array[] = [];
+    let total = 0;
     try {
-      buf = await res.arrayBuffer();
+      const reader = res.body?.getReader();
+      if (!reader) return ok(new Uint8Array(await res.arrayBuffer()));
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        total += value.byteLength;
+        if (total > max) {
+          await reader.cancel();
+          return tooBig(total);
+        }
+        chunks.push(value);
+      }
     } catch {
       return fail();
     }
-    if (o.maxBytes !== undefined && buf.byteLength > o.maxBytes) {
-      return err({ kind: 'bad_response', detail: `respuesta de ${buf.byteLength} B (máx. ${o.maxBytes})` });
+    const out = new Uint8Array(total);
+    let offset = 0;
+    for (const c of chunks) {
+      out.set(c, offset);
+      offset += c.byteLength;
     }
-    return ok(new Uint8Array(buf));
+    return ok(out);
   } finally {
     clearTimeout(timer);
     o.signal.removeEventListener('abort', onAbort);

@@ -3,6 +3,7 @@ import { For, Show } from 'solid-js';
 import { t } from '../../i18n';
 import { duration } from '../../lib/format';
 import { Icon } from '../Icon/Icon';
+import { Odometer } from '../Odometer/Odometer';
 import { RiskChip } from '../RiskChip/RiskChip';
 import { type ProfileSegment, RiskProfile } from '../RiskProfile/RiskProfile';
 import s from './RouteCompare.module.css';
@@ -62,12 +63,13 @@ export function RouteCompare(props: RouteCompareProps) {
                   <RiskChip level={r.worst} short noIcon />
                 </span>
                 <span class={s.num}>
-                  {r.kmHigh}
+                  <Odometer value={String(r.kmHigh)} />
                   <small> {t().units.km}</small>
                   <span class="visually-hidden">{t().compare.kmHigh(r.kmHigh)}</span>
                 </span>
                 <span class={s.sub}>
-                  {r.via} · {r.distanceKm} {t().units.km} · {t().compare.arrival(r.arrival)}
+                  {r.via} · {r.distanceKm} {t().units.km} · {t().compare.arrival('')}
+                  <Odometer value={r.arrival} />
                 </span>
                 <span class={s.profile}>
                   <RiskProfile segments={r.profile} totalKm={r.distanceKm} routeId={r.id} variant="mini" />

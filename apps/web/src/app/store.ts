@@ -71,6 +71,7 @@ export function createAppStore(services: Services, opts: StoreOptions = {}) {
     `${a.at.lat.toFixed(4)},${a.at.lng.toFixed(4)};${b.at.lat.toFixed(4)},${b.at.lng.toFixed(4)}`;
   const weather = new Map<string, HourlyWeather>();
   const [warnings, setWarnings] = createSignal<Warning[]>([]);
+  let warningsAt = 0;
   const [warningsStatus, setWarningsStatus] = createSignal<WarningsStatus>(services.warnings ? 'idle' : 'off');
 
   /** Avisos de la caja que cubre todas las rutas, para toda la ventana de salida ofrecida (una petición por consulta). */
@@ -88,6 +89,7 @@ export function createAppStore(services: Services, opts: StoreOptions = {}) {
     }
     const longest = Math.max(...views.map((v) => v.route.durationS)) * 1000;
     const start = clock();
+    warningsAt = start;
     setWarningsStatus('loading');
     const res = await provider.getWarnings(
       [w - 0.05, s - 0.05, e + 0.05, n + 0.05],
@@ -113,6 +115,15 @@ export function createAppStore(services: Services, opts: StoreOptions = {}) {
 
   let ctrl: AbortController | undefined;
   onCleanup(() => ctrl?.abort());
+
+  // Con la pestaña abierta, los avisos se refrescan al caducar la caché del Worker (10 min).
+  createEffect(() => {
+    nowMs();
+    const vs = views();
+    if (!vs.length || !ctrl || ctrl.signal.aborted || warningsStatus() === 'loading' || warningsStatus() === 'off')
+      return;
+    if (clock() - warningsAt >= 10 * 60_000) void loadWarnings(vs, ctrl.signal);
+  });
 
   /** Pide rutas y previsión para el par origen/destino actual. Cancela lo anterior. */
   async function load(): Promise<void> {

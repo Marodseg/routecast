@@ -57,6 +57,24 @@ export class OrsRouting implements RoutingProvider {
     to: LatLng,
     opts: { alternatives: number; signal: AbortSignal },
   ): Promise<Result<Route[]>> {
+    const first = await this.#request(from, to, opts);
+    // ORS limita las alternativas por distancia (error 2004): en ese caso, al menos una ruta.
+    if (
+      !first.ok &&
+      first.error.kind === 'bad_response' &&
+      first.error.detail === 'ors:2004' &&
+      opts.alternatives > 0
+    ) {
+      return this.#request(from, to, { ...opts, alternatives: 0 });
+    }
+    return first;
+  }
+
+  async #request(
+    from: LatLng,
+    to: LatLng,
+    opts: { alternatives: number; signal: AbortSignal },
+  ): Promise<Result<Route[]>> {
     const alt = Math.max(0, Math.min(2, opts.alternatives));
     const body = {
       coordinates: [
@@ -87,6 +105,7 @@ export class OrsRouting implements RoutingProvider {
           const code = (b as { error?: { code?: unknown } } | null)?.error?.code;
           // 2009/2010: no se encontró ruta / punto fuera de la red (documentación de errores de ORS).
           if (code === 2009 || code === 2010) return { kind: 'no_route' };
+          if (code === 2004) return { kind: 'bad_response', detail: 'ors:2004' };
           if (status === 403) return { kind: 'unavailable', status };
           return undefined;
         },
