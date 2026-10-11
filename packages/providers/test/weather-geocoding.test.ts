@@ -1,7 +1,7 @@
 import { HttpResponse, http } from 'msw';
 import { describe, expect, it } from 'vitest';
 import type { Clock } from '../src/fallback';
-import { OpenMeteoWeather } from '../src/openmeteo';
+import { batchTimeoutMs, OpenMeteoWeather } from '../src/openmeteo';
 import { PhotonGeocoding } from '../src/photon';
 import { fixture, server, signal } from './setup';
 
@@ -132,6 +132,34 @@ describe('OpenMeteoWeather (fixtures reales)', () => {
     expect(seen).toHaveLength(3);
     expect(seen.at(-1)).toEqual([45, 45]);
     expect(seen.every(([d], i) => i === 0 || d > (seen[i - 1]?.[0] ?? 0))).toBe(true);
+  });
+
+  it('un 429 frena también los lotes que aún no han salido (el límite es por IP, no por lote)', async () => {
+    const single = fixture('open-meteo-single.json');
+    let requests = 0;
+    const started: number[] = [];
+    const clock = fakeClock();
+    server.use(
+      http.get(OM, ({ request }) => {
+        requests++;
+        started.push(clock.slept.length);
+        if (requests === 1) return new HttpResponse(null, { status: 429, headers: { 'Retry-After': '4' } });
+        const n = new URL(request.url).searchParams.get('latitude')?.split(',').length ?? 0;
+        return HttpResponse.json(n === 1 ? single : Array.from({ length: n }, () => single));
+      }),
+    );
+    const many = Array.from({ length: 80 }, (_, i) => ({ key: `k${i}`, at: { lat: 37 + i * 0.1, lng: -4 } }));
+    const r = await new OpenMeteoWeather({ clock }).getHourly(many, { signal: signal() });
+    expect(r.ok && r.value).toHaveLength(80);
+    // El lote del 429 espera 4 s para reintentar, y el cuarto lote, que sale después, también.
+    expect(clock.slept.filter((ms) => ms === 4000).length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('el timeout de cada lote crece con celdas × días (con carga, la latencia también)', () => {
+    expect(batchTimeoutMs(1, 1)).toBeGreaterThanOrEqual(10_000);
+    expect(batchTimeoutMs(20, 7)).toBeGreaterThan(batchTimeoutMs(20, 2));
+    expect(batchTimeoutMs(20, 7)).toBeGreaterThanOrEqual(40_000);
+    expect(batchTimeoutMs(20, 7)).toBeLessThanOrEqual(60_000);
   });
 
   it('cancelado a mitad: aborted', async () => {

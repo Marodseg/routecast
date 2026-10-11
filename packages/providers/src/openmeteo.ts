@@ -41,9 +41,13 @@ export const OpenMeteoResponse = z.union([z.array(Location).min(1), Location]);
  */
 export const MAX_CELLS_PER_REQUEST = 20;
 const MAX_PARALLEL = 3;
-/** Timeout por lote: base + margen por ubicación (un lote lleno ≈ 22 s). */
-const BASE_TIMEOUT_MS = 10_000;
-const PER_CELL_TIMEOUT_MS = 600;
+/**
+ * Timeout por lote: base + margen por celda·día. Con carga, la latencia crece con celdas × días (medido 2026-10-11:
+ * 20 celdas, 3 días → 13 s; 7 días → 28 s). Un lote lleno de 7 días ≈ 45 s; de 2 días ≈ 20 s.
+ */
+export function batchTimeoutMs(cells: number, days: number): number {
+  return Math.min(60_000, 10_000 + 250 * cells * Math.max(1, days));
+}
 
 export interface OpenMeteoOptions {
   baseUrl?: string;
@@ -107,12 +111,18 @@ export class OpenMeteoWeather implements WeatherProvider {
     // Varios lotes a la vez (la latencia crece con las ubicaciones de cada petición), escalonados al empezar.
     let next = 0;
     let done = 0;
+    // Un 429 frena a todos: el límite es por IP, así que los lotes que aún no han salido esperan lo mismo.
+    const gate = { until: 0 };
     const worker = async (w: number) => {
       if (w > 0) await clock.sleep(w * (this.#o.batchGapMs ?? 250), opts.signal);
       while (next < batches.length && !opts.signal.aborted) {
+        const wait = gate.until - clock.now();
+        if (wait > 0) await clock.sleep(wait, opts.signal);
+        // Tras esperar, otro trabajador puede haberse llevado el último lote.
+        if (opts.signal.aborted || next >= batches.length) break;
         const i = next++;
         const batch = batches[i] as WeatherCell[];
-        results[i] = await this.#batch(batch, opts, clock);
+        results[i] = await this.#batch(batch, opts, clock, gate);
         done += batch.length;
         if (!opts.signal.aborted) opts.onProgress?.(done, cells.length);
       }
@@ -129,7 +139,9 @@ export class OpenMeteoWeather implements WeatherProvider {
     batch: readonly WeatherCell[],
     opts: { signal: AbortSignal; forecastDays?: number },
     clock: Clock,
+    gate: { until: number },
   ): Promise<Result<HourlyWeather[]>> {
+    const days = Math.max(1, Math.min(7, opts.forecastDays ?? 3));
     const params = new URLSearchParams({
       latitude: batch.map((c) => c.at.lat.toFixed(2)).join(','),
       longitude: batch.map((c) => c.at.lng.toFixed(2)).join(','),
@@ -137,14 +149,14 @@ export class OpenMeteoWeather implements WeatherProvider {
       timezone: 'UTC',
       timeformat: 'unixtime',
       wind_speed_unit: 'kmh',
-      forecast_days: String(Math.max(1, Math.min(7, opts.forecastDays ?? 3))),
+      forecast_days: String(days),
     });
     const url = `${this.#o.baseUrl ?? 'https://api.open-meteo.com'}/v1/forecast?${params}`;
     for (let attempt = 0; ; attempt++) {
       const res = await getJson(url, {
         schema: OpenMeteoResponse,
         signal: opts.signal,
-        timeoutMs: this.#o.timeoutMs ?? BASE_TIMEOUT_MS + PER_CELL_TIMEOUT_MS * batch.length,
+        timeoutMs: this.#o.timeoutMs ?? batchTimeoutMs(batch.length, days),
         ...(this.#o.fetchImpl ? { fetchImpl: this.#o.fetchImpl } : {}),
       });
       if (res.ok) {
@@ -160,7 +172,9 @@ export class OpenMeteoWeather implements WeatherProvider {
       }
       // 429 es un estado normal (CLAUDE.md regla 6): esperamos lo que pida, con tope, y reintentamos.
       if (res.error.kind !== 'rate_limited' || attempt >= (this.#o.maxRetries ?? 2)) return res;
-      await clock.sleep(Math.min(10, res.error.retryAfterS ?? 2 ** (attempt + 1)) * 1000, opts.signal);
+      const ms = Math.min(10, res.error.retryAfterS ?? 2 ** (attempt + 1)) * 1000;
+      gate.until = Math.max(gate.until, clock.now() + ms);
+      await clock.sleep(gate.until - clock.now(), opts.signal);
       if (opts.signal.aborted) return err({ kind: 'aborted' });
     }
   }
