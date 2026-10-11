@@ -1,7 +1,7 @@
 import { lightColors } from '@routecast/shared/design';
 import { createMemo, createSignal, For, type JSX } from 'solid-js';
 import { t } from '../i18n';
-import { hhmm } from '../lib/format';
+import { localWhen } from '../lib/format';
 import { AlertsStrip } from '../ui/AlertsStrip/AlertsStrip';
 import { BottomSheet, type Snap } from '../ui/BottomSheet/BottomSheet';
 import { CommandSearch } from '../ui/CommandSearch/CommandSearch';
@@ -81,10 +81,17 @@ export function Gallery() {
   const selLevel = () => (selRoute() ? fx.worstAt(selRoute() as fx.FixtureRoute, dep()) : 0);
   const valueText = (v: number) =>
     t().picker.valueText(
-      hhmm(v),
+      localWhen(fx.EPOCH + v * 60_000, fx.EPOCH, t().locale),
       sel(),
       t().risk.levels[selRoute() ? fx.worstAt(selRoute() as fx.FixtureRoute, v) : 0] ?? '',
     );
+  const pickDay = (startMs: number) => {
+    const cur = new Date(fx.EPOCH + dep() * 60_000);
+    const next = new Date(startMs);
+    next.setHours(cur.getHours(), cur.getMinutes(), 0, 0);
+    const minutes = Math.round((next.getTime() - fx.EPOCH) / 60_000);
+    setDep(Math.min(fx.DAY_MAX, Math.max(fx.MIN, minutes)));
+  };
 
   const swatches = Object.keys(lightColors).filter((k) => !k.startsWith('risk')) as (keyof typeof lightColors)[];
   const kebab = (x: string) => x.replace(/([a-z])([A-Z0-9])/g, '$1-$2').toLowerCase();
@@ -166,15 +173,18 @@ export function Gallery() {
         <Section
           id="picker"
           title="DeparturePicker"
-          note="Elemento firma. Arrastra (con inercia), rueda, ← → (10 min), Re Pág / Av Pág (1 h), Inicio = ahora."
+          note="Elemento firma. La fila elige el día; el dial, la hora. Arrastra (con inercia), rueda, ← → (10 min), Re Pág / Av Pág (1 h), Inicio = ahora."
         >
           <div class={s.pickerGrid}>
             <DeparturePicker
               value={dep()}
               onChange={setDep}
               min={fx.MIN}
-              max={fx.MAX}
+              max={fx.DAY_MAX}
               now={fx.NOW}
+              epochMs={fx.EPOCH}
+              days={fx.days}
+              onDay={pickDay}
               bands={fx.bands}
               selected={sel()}
               valueText={valueText}
@@ -184,13 +194,25 @@ export function Gallery() {
                 value={dep()}
                 onChange={setDep}
                 min={fx.MIN}
-                max={fx.MAX}
+                max={fx.DAY_MAX}
                 now={fx.NOW}
+                epochMs={fx.EPOCH}
+                days={fx.days}
+                onDay={pickDay}
                 bands={fx.bands}
                 selected={sel()}
                 valueText={valueText}
               />
-              <DeparturePicker value={fx.NOW} onChange={() => {}} min={fx.MIN} max={fx.MAX} now={fx.NOW} disabled />
+              <DeparturePicker
+                value={fx.NOW}
+                onChange={() => {}}
+                min={fx.MIN}
+                max={fx.MAX}
+                now={fx.NOW}
+                epochMs={fx.EPOCH}
+                days={fx.days}
+                disabled
+              />
             </div>
           </div>
         </Section>
@@ -329,6 +351,7 @@ export function Gallery() {
               ]}
             />
             <AlertsStrip warnings={[]} partial />
+            <AlertsStrip warnings={[]} distant />
           </div>
         </Section>
 

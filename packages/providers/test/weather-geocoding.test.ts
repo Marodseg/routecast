@@ -123,7 +123,7 @@ describe('OpenMeteoWeather (fixtures reales)', () => {
         return HttpResponse.json(n === 1 ? single : Array.from({ length: n }, () => single));
       }),
     );
-    const many = Array.from({ length: 45 }, (_, i) => ({ key: 'k' + i, at: { lat: 37 + i * 0.1, lng: -4 } }));
+    const many = Array.from({ length: 45 }, (_, i) => ({ key: `k${i}`, at: { lat: 37 + i * 0.1, lng: -4 } }));
     const seen: [number, number][] = [];
     await new OpenMeteoWeather({ clock: fakeClock() }).getHourly(many, {
       signal: signal(),

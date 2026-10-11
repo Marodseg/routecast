@@ -108,15 +108,22 @@
 
 /* Previsión en curso: progreso real (celdas resueltas), no un spinner. */
 .progress {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: var(--space-1) var(--space-2);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
   align-items: baseline;
+  margin-block: var(--space-1) var(--space-2);
   color: var(--ink);
 }
 
+.progress > :global(.mono) {
+  margin-left: auto;
+  white-space: nowrap;
+  color: var(--ink-muted);
+}
+
 .bar {
-  grid-column: 1 / -1;
+  flex: 1 0 100%;
   display: block;
   height: 3px;
   overflow: hidden;

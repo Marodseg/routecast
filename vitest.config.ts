@@ -1,5 +1,8 @@
 import { defineConfig } from 'vitest/config';
 
+// Misma zona en local y en CI (que corre en UTC): la web pinta en hora local y hay tests de cambio de hora.
+process.env.TZ = 'Europe/Madrid';
+
 export default defineConfig({
   test: {
     projects: [

@@ -37,11 +37,16 @@ export const en: Dict = {
   },
   picker: {
     label: 'Departure time',
+    days: 'Departure day',
+    today: 'Today',
+    tomorrow: 'Tomorrow',
+    orientative: 'forecast is only a guide',
+    orientativeNote: 'Forecast is only a guide (beyond 48 h)',
     now: 'Now',
     nowMark: 'now',
     later: (d) => `+${d}`,
-    hint: 'Drag the dial or use the arrow keys (10 min), Page Up / Page Down (1 h), Home (now) and End (latest).',
-    valueText: (time, route, level) => `Departing at ${time}. Route ${route}: ${level}.`,
+    hint: 'The row picks the day. Drag the dial or use the arrow keys (10 min), Page Up / Page Down (1 h), Home (now) and End (latest).',
+    valueText: (when, route, level) => `Departure: ${when}. Route ${route}: ${level}.`,
   },
   roadwind: {
     title: 'Wind relative to the road',
@@ -91,6 +96,7 @@ export const en: Dict = {
     title: 'Official warnings',
     count: (n) => (n === 1 ? '1 warning on your route' : `${n} warnings on your route`),
     none: 'No official warnings on your route for that window.',
+    notYet: 'Official warnings are not usually issued this far ahead. None listed does not mean a clear day.',
     window: (from, to) => `${from}–${to}`,
     levels: { yellow: 'Yellow', orange: 'Orange', red: 'Red' },
     source: (s) => `Source: ${s}`,
@@ -166,8 +172,11 @@ export const en: Dict = {
     unnamed: 'Unnamed route',
     via: (km) => `${km} km`,
     worstPoint: (route, time) => `Worst point on route ${route} · ${time}`,
+    worstShort: (route) => `Worst point · route ${route}`,
   },
-  confidence: { low: 'Forecast beyond 48 h: low confidence.' },
+  confidence: {
+    low: 'Beyond 48 h the hourly forecast is only a guide: the detail can change.',
+  },
   attribution:
     '© OpenStreetMap contributors · OpenFreeMap · Weather data by Open-Meteo.com (CC-BY 4.0) · Routing by Valhalla (FOSSGIS) / OSRM / OpenRouteService · Warnings: Source: AEMET · Meteoalarm (EUMETNET) · Places: Wikidata',
 };

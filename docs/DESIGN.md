@@ -56,7 +56,7 @@ accesible por teclado, con test de renderizado y captura de regresión visual.
 
 | Componente | Descripción |
 |---|---|
-| **DeparturePicker** (firma) | Regla horizontal arrastrable tipo "dial/cinta" con marcas por hora y banda de riesgo detrás; arrastrar cambia la hora y la ruta se repinta en vivo. Háptico en móvil (si disponible) |
+| **DeparturePicker** (firma) | Regla horizontal arrastrable tipo "dial/cinta" con marcas por hora y banda de riesgo detrás; arrastrar cambia la hora y la ruta se repinta en vivo. El día se elige en una fila del mismo instrumento (no un `<input type="date">`). Háptico en móvil (si disponible) |
 | **RouteRibbon** | La ruta en el mapa como cinta con gradiente discreto por riesgo y marcas de hora/ETA cada ~50 km; los puntos críticos son "chinchetas" con valores |
 | **RiskProfile** | Perfil a lo largo del km (como un perfil de altitud) con el riesgo como relieve; cursor sincronizado con el mapa |
 | **WindRose / RoadWind** (firma) | Mini-brújula que dibuja **el rumbo de la carretera y el vector de viento**, resaltando la componente cruzada. Se entiende de un vistazo sin leer números |

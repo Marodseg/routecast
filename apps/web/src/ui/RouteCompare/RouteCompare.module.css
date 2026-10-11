@@ -131,21 +131,27 @@
   color: color-mix(in oklch, var(--surface) 75%, transparent);
 }
 
+/* Trama que avanza (sin brillos ni degradados); con movimiento reducido queda quieta. */
 .scan {
   display: block;
   height: 10px;
   background:
-    linear-gradient(90deg, transparent, color-mix(in oklch, var(--accent) 55%, transparent), transparent) -70% 0 / 40%
-    100% no-repeat,
+    repeating-linear-gradient(90deg, var(--rule-strong) 0 2px, transparent 2px 8px) 0 0 / 16px 100%,
     var(--surface-sunken);
-  animation: scan 1.3s var(--ease-in-out) infinite;
+  animation: scan 0.8s linear infinite;
 }
 
 @keyframes scan {
   to {
     background-position:
-      170% 0,
+      16px 0,
       0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scan {
+    animation: none;
   }
 }
 
@@ -183,9 +189,10 @@
 
 /* Estrecho: nombre en su línea y tres lecturas en columnas alineadas con la cabecera. */
 @container (max-width: 440px) {
+  /* El riesgo (nivel + qué es) se lleva el espacio; tiempo y km son cortos. */
   .head,
   .row {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: 5rem minmax(0, 1fr) 4.5rem;
   }
 
   .head > :first-child {

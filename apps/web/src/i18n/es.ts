@@ -36,11 +36,16 @@ export const es = {
   },
   picker: {
     label: 'Hora de salida',
+    days: 'Día de salida',
+    today: 'Hoy',
+    tomorrow: 'Mañana',
+    orientative: 'previsión orientativa',
+    orientativeNote: 'Previsión orientativa (más de 48 h)',
     now: 'Ahora',
     nowMark: 'ahora',
     later: (d: string) => `+${d}`,
-    hint: 'Arrastra el dial o usa las flechas (10 min), Re Pág / Av Pág (1 h), Inicio (ahora) y Fin (última hora).',
-    valueText: (time: string, route: string, level: string) => `Salida a las ${time}. Ruta ${route}: ${level}.`,
+    hint: 'La fila elige el día. Arrastra el dial o usa las flechas (10 min), Re Pág / Av Pág (1 h), Inicio (ahora) y Fin (última hora).',
+    valueText: (when: string, route: string, level: string) => `Salida: ${when}. Ruta ${route}: ${level}.`,
   },
   roadwind: {
     title: 'Viento respecto a la carretera',
@@ -90,6 +95,8 @@ export const es = {
     title: 'Avisos oficiales',
     count: (n: number) => (n === 1 ? '1 aviso en tu ruta' : `${n} avisos en tu ruta`),
     none: 'Sin avisos oficiales en tu ruta para esa ventana.',
+    notYet:
+      'Los avisos oficiales no suelen publicarse con tanta antelación. Que no haya ninguno no significa que el día vaya a estar despejado.',
     window: (from: string, to: string) => `${from}–${to}`,
     levels: { yellow: 'Amarillo', orange: 'Naranja', red: 'Rojo' },
     source: (s: string) => `Fuente: ${s}`,
@@ -165,8 +172,11 @@ export const es = {
     unnamed: 'Ruta sin nombre',
     via: (km: number) => `${km} km`,
     worstPoint: (route: string, time: string) => `Peor punto de la ruta ${route} · ${time}`,
+    worstShort: (route: string) => `Peor punto · ruta ${route}`,
   },
-  confidence: { low: 'Previsión a más de 48 h: confianza baja.' },
+  confidence: {
+    low: 'A más de 48 h la previsión horaria es orientativa: el detalle puede cambiar.',
+  },
   attribution:
     '© OpenStreetMap contributors · OpenFreeMap · Weather data by Open-Meteo.com (CC-BY 4.0) · Routing by Valhalla (FOSSGIS) / OSRM / OpenRouteService · Avisos: Fuente: AEMET · Meteoalarm (EUMETNET) · Lugares: Wikidata',
 };

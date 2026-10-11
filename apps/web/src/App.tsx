@@ -1,3 +1,4 @@
+import { LOW_CONFIDENCE_AFTER_MS } from '@routecast/core';
 import type { Place } from '@routecast/shared';
 import { batch, createEffect, createMemo, createSignal, Match, on, onCleanup, onMount, Show, Switch } from 'solid-js';
 import s from './App.module.css';
@@ -5,9 +6,10 @@ import { causeOf, explainFactor, partialNote } from './app/explain';
 import { loadGazetteer, mergePlaces, searchGazetteer } from './app/gazetteer';
 import { createServices, type Services } from './app/services';
 import { createAppStore } from './app/store';
-import { localHHMM, MIN_MS } from './app/time';
+import { MIN_MS } from './app/time';
 import { readUrl, writeUrl } from './app/url';
 import { t } from './i18n';
+import { localWhen } from './lib/format';
 import { effectiveTheme } from './lib/theme';
 import { MapPlaceholder } from './map/MapPlaceholder';
 import { RouteMap } from './map/RouteMap';
@@ -131,7 +133,7 @@ export function App(props: { services?: Services }) {
         via: services.providerLabel(view.route.provider),
         distanceKm: Math.round(view.route.distanceM / 1000),
         durationMin: Math.round(view.route.durationS / 60),
-        arrival: localHHMM(store.departureMs() + view.route.durationS * 1000),
+        arrival: localWhen(store.departureMs() + view.route.durationS * 1000, store.departureMs(), t().locale),
         worst: level,
         ...(cause ? { cause } : {}),
         kmHigh: Math.round(ev.risk.kmAtLevel2Plus),
@@ -139,7 +141,10 @@ export function App(props: { services?: Services }) {
         alerts: alerts.length,
         ...(worst && level !== 'unknown' && level > 0
           ? {
-              worstText: `${explainFactor(worst, t())} · ${t().explain.at(localHHMM(worst.sample.etaMs), Math.round(worst.sample.kmFromStart))}`,
+              worstText: `${explainFactor(worst, t())} · ${t().explain.at(
+                localWhen(worst.sample.etaMs, store.departureMs(), t().locale),
+                Math.round(worst.sample.kmFromStart),
+              )}`,
             }
           : {}),
       };
@@ -163,7 +168,7 @@ export function App(props: { services?: Services }) {
       for (let tS = stepS, i = 0; tS < view.route.durationS - stepS / 3; tS += stepS) {
         while (i < cum.length - 1 && (cum[i] ?? 0) < tS) i++;
         const at = view.route.geometry[i];
-        if (at) ticks.push({ at, label: localHHMM(store.departureMs() + tS * 1000) });
+        if (at) ticks.push({ at, label: localWhen(store.departureMs() + tS * 1000, store.departureMs(), t().locale) });
       }
       return { letter: view.letter, geometry: view.route.geometry, cumM: view.cumM, segments: ev.risk.segments, ticks };
     }),
@@ -171,11 +176,11 @@ export function App(props: { services?: Services }) {
 
   const valueText = (m: number) => {
     const e = store.selectedEval();
-    const time = localHHMM(store.dayStart() + m * MIN_MS);
-    if (!e) return t().picker.valueText(time, '—', '—');
+    const when = localWhen(store.dayStart() + m * MIN_MS, store.dayStart(), t().locale);
+    if (!e) return t().picker.valueText(when, '—', '—');
     const lvl = e.ev.risk.worstLevel;
     return t().picker.valueText(
-      time,
+      when,
       e.view.letter,
       lvl === 'unknown' ? t().risk.unknown : (t().risk.levels[lvl] ?? ''),
     );
@@ -186,9 +191,13 @@ export function App(props: { services?: Services }) {
       id: h.warning.id,
       level: h.warning.level,
       phenomenon: t().alerts.kinds[h.warning.kind],
-      area: `${h.warning.areaName} · ${t().alerts.stretch(Math.round(h.fromKm), Math.round(h.toKm), localHHMM(h.firstEtaMs))}`,
-      from: localHHMM(h.warning.fromMs),
-      to: localHHMM(h.warning.toMs),
+      area: `${h.warning.areaName} · ${t().alerts.stretch(
+        Math.round(h.fromKm),
+        Math.round(h.toKm),
+        localWhen(h.firstEtaMs, store.departureMs(), t().locale),
+      )}`,
+      from: localWhen(h.warning.fromMs, store.departureMs(), t().locale),
+      to: localWhen(h.warning.toMs, store.departureMs(), t().locale),
       source: h.warning.source,
     })),
   );
@@ -246,6 +255,9 @@ export function App(props: { services?: Services }) {
           min={store.pickerMin()}
           max={store.pickerMax()}
           now={store.pickerMin()}
+          epochMs={store.dayStart()}
+          days={store.days()}
+          onDay={store.setDepartureDay}
           bands={store.bands()}
           selected={store.selected() ?? undefined}
           valueText={valueText}
@@ -337,6 +349,7 @@ export function App(props: { services?: Services }) {
               partial={store.warningsStatus() === 'partial'}
               unavailable={store.warningsStatus() === 'down' || store.warningsStatus() === 'off'}
               loading={store.warningsStatus() === 'loading'}
+              distant={store.departureMs() - store.nowMs() > LOW_CONFIDENCE_AFTER_MS}
             />
           </Show>
           <RouteCompare
@@ -350,10 +363,13 @@ export function App(props: { services?: Services }) {
             {(p) => (
               <section
                 class={`${s.readout} plate`}
-                aria-label={t().route.worstPoint(store.selected() ?? '', localHHMM(p().sample.etaMs))}
+                aria-label={t().route.worstPoint(
+                  store.selected() ?? '',
+                  localWhen(p().sample.etaMs, store.departureMs(), t().locale),
+                )}
               >
                 <div>
-                  <span class="label">{t().route.worstPoint(store.selected() ?? '', localHHMM(p().sample.etaMs))}</span>
+                  <span class="label">{t().route.worstShort(store.selected() ?? '')}</span>
                   <Show when={causeOf(p(), t())}>
                     {(c) => (
                       <p class={s.cause}>
@@ -367,7 +383,10 @@ export function App(props: { services?: Services }) {
                   </Show>
                   <p class={s.big}>{explainFactor(p(), t())}</p>
                   <p class={s.where}>
-                    {t().explain.at(localHHMM(p().sample.etaMs), Math.round(p().sample.kmFromStart))}
+                    {t().explain.at(
+                      localWhen(p().sample.etaMs, store.departureMs(), t().locale),
+                      Math.round(p().sample.kmFromStart),
+                    )}
                   </p>
                 </div>
                 <Show when={p().risk.values.windFromDeg !== undefined && p().risk.values.windFromDeg !== null}>

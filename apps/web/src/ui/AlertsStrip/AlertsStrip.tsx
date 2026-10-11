@@ -24,6 +24,8 @@ export interface AlertsStripProps {
   /** No se pudieron consultar (Worker caído o sin configurar): nunca se presenta como «sin avisos». */
   unavailable?: boolean;
   loading?: boolean;
+  /** La salida queda a más de 48 h: un listado vacío no es vía libre. */
+  distant?: boolean;
 }
 
 const RANK: Record<WarningLevel, number> = { yellow: 1, orange: 2, red: 3 };
@@ -47,7 +49,7 @@ export function AlertsStrip(props: AlertsStripProps) {
         when={props.warnings.length}
         fallback={
           <p class={s.none} role="status">
-            <Icon name="l0" size={14} /> {t().alerts.none}
+            <Icon name="l0" size={14} /> {props.distant ? t().alerts.notYet : t().alerts.none}
             <Show when={props.partial}> {t().alerts.partial}</Show>
           </p>
         }

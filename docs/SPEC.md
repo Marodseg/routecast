@@ -127,13 +127,13 @@ Reglas de honestidad:
 ## 7. UX
 
 ### Pantallas / estados
-1. **Inicio**: mapa a pantalla completa, buscador origen/destino, hora de salida (por defecto "ahora").
+1. **Inicio**: mapa a pantalla completa, buscador origen/destino, día y hora de salida (por defecto "ahora").
 2. **Resultados**: hasta 3 rutas como tarjetas (duración, km, peor tramo, icono del factor dominante) + mapa con rutas coloreadas.
 3. **Detalle de ruta**: línea de tiempo/perfil con riesgo a lo largo del km, lista de puntos críticos con hora, causa y valores.
 4. **Estados vacío/error/parcial**: proveedor caído, sin cobertura de avisos, previsión fuera de horizonte, 429.
 
 ### Principios
-- El **deslizador de hora de salida** es la interacción principal: mover y ver cambiar las rutas en vivo.
+- El **día y la hora de salida** son la interacción principal. Una fila elige el día (hoy y los seis siguientes, dentro de la previsión horaria); el dial sigue eligiendo la hora y la ruta se repinta en vivo. A partir del día que cruza las ~48 h, la fila y una nota dicen que el detalle horario es orientativo y puede cambiar. Mañana, dentro de esas 48 h, no lleva ese aviso.
 - Colores + iconos + texto (daltónicos). Leyenda siempre visible.
 - Texto claro: "17:10 · A-92 km 41 · rachas 78 km/h (viento cruzado 62 km/h)".
 - Atribuciones en pie, siempre visibles (§ PROVIDERS).

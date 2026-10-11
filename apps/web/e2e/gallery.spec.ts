@@ -44,7 +44,7 @@ test.describe('galería de componentes', () => {
     await expect(dial).toHaveAttribute('aria-valuenow', '1090');
     await page.keyboard.press('Home');
     await expect(dial).toHaveAttribute('aria-valuenow', '940');
-    await expect(dial).toHaveAttribute('aria-valuetext', /Salida a las 15:40\. Ruta A:/);
+    await expect(dial).toHaveAttribute('aria-valuetext', /Salida: 15:40\. Ruta A:/);
   });
 
   test('cambiar la hora reordena el comparador sin peticiones de red', async ({ page }) => {

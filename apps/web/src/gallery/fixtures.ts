@@ -2,7 +2,7 @@
 import type { LatLng, Place, RiskLevel } from '@routecast/shared';
 import { t } from '../i18n';
 import { duration, hhmm } from '../lib/format';
-import type { DialBand } from '../ui/DeparturePicker/DeparturePicker';
+import type { DialBand, PickerDay } from '../ui/DeparturePicker/DeparturePicker';
 import type { ProfileSegment } from '../ui/RiskProfile/RiskProfile';
 import type { CompareRoute } from '../ui/RouteCompare/RouteCompare';
 
@@ -29,6 +29,21 @@ export interface FixtureRoute {
 export const NOW = 15 * 60 + 40;
 export const MIN = NOW;
 export const MAX = 23 * 60 + 50;
+/** 11 oct 2026, medianoche local: la fila de días no depende del día en que se abra la galería. */
+export const EPOCH = new Date(2026, 9, 11).setHours(0, 0, 0, 0);
+export const days: PickerDay[] = Array.from({ length: 7 }, (_, i) => {
+  const start = new Date(EPOCH);
+  start.setDate(start.getDate() + i);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 1);
+  const now = EPOCH + NOW * 60_000;
+  return { startMs: start.getTime(), orientative: end.getTime() - 10 * 60_000 > now + 48 * 3_600_000 };
+});
+const lastEvening = new Date(EPOCH);
+lastEvening.setDate(lastEvening.getDate() + 6);
+lastEvening.setHours(23, 50, 0, 0);
+export const DAY_MAX = Math.round((lastEvening.getTime() - EPOCH) / 60_000);
 
 export const routes: FixtureRoute[] = [
   {

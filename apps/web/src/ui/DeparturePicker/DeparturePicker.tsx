@@ -1,7 +1,7 @@
 import type { RiskLevelOrUnknown } from '@routecast/shared';
-import { createMemo, createSignal, createUniqueId, For, onCleanup, onMount, Show } from 'solid-js';
+import { createEffect, createMemo, createSignal, createUniqueId, For, onCleanup, onMount, Show } from 'solid-js';
 import { t } from '../../i18n';
-import { duration, hhmm } from '../../lib/format';
+import { ahead, hhmm, sameLocalDay, shortDay } from '../../lib/format';
 import { prefersReducedMotion, tick } from '../../lib/motion';
 import { Odometer } from '../Odometer/Odometer';
 import s from './DeparturePicker.module.css';
@@ -12,12 +12,25 @@ export interface DialBand {
   levels: RiskLevelOrUnknown[];
 }
 
+export interface PickerDay {
+  /** Medianoche local de ese día. */
+  startMs: number;
+  /** El día cruza las 48 h: la previsión de esa jornada es orientativa. */
+  orientative: boolean;
+}
+
 export interface DeparturePickerProps {
   /** Minutos desde la medianoche local del día de salida (puede pasar de 1440). */
   value: number;
   onChange: (minutes: number) => void;
   min: number;
   max: number;
+  /** Medianoche local de hoy, origen de `value`. Hace falta si hay `days`. */
+  epochMs?: number;
+  /** Hoy y los días siguientes dentro del horizonte. El dial sigue eligiendo la hora. */
+  days?: PickerDay[];
+  /** Elige ese día conservando la hora (lo aplica quien tiene el reloj). */
+  onDay?: (startMs: number) => void;
   /** Minuto actual: marca «ahora» y destino de la tecla Inicio. */
   now: number;
   step?: number;
@@ -232,6 +245,39 @@ export function DeparturePicker(props: DeparturePickerProps) {
 
   const delta = () => props.value - props.now;
 
+  const dayButtons: HTMLLabelElement[] = [];
+  const activeDay = createMemo(() => {
+    const days = props.days;
+    const epoch = props.epochMs;
+    if (!days?.length || epoch === undefined) return undefined;
+    const v = snap(shown());
+    let found = days[0];
+    for (const day of days) {
+      if (v >= Math.round((day.startMs - epoch) / 60_000)) found = day;
+      else break;
+    }
+    return found;
+  });
+  const dayCaption = () => {
+    const day = activeDay();
+    const epoch = props.epochMs;
+    if (!day || epoch === undefined || sameLocalDay(day.startMs, epoch)) return null;
+    return shortDay(day.startMs, t().locale);
+  };
+  const reveal = (el: HTMLLabelElement) => {
+    const row = el.parentElement;
+    if (!row) return;
+    const left = el.offsetLeft - (row.clientWidth - el.clientWidth) / 2;
+    row.scrollTo?.({ left: Math.max(0, left), behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+  };
+  createEffect(() => {
+    const days = props.days;
+    const day = activeDay();
+    if (!days || !day) return;
+    const el = dayButtons[days.indexOf(day)];
+    if (el) reveal(el);
+  });
+
   return (
     <div class={`${s.dial} plate`} classList={{ [s.disabled ?? '']: !!props.disabled }}>
       <div class={s.top}>
@@ -247,6 +293,68 @@ export function DeparturePicker(props: DeparturePickerProps) {
           {t().picker.now}
         </button>
       </div>
+      <Show when={props.days?.length}>
+        <div class={s.days} role="radiogroup" aria-label={t().picker.days}>
+          <For each={props.days}>
+            {(day, i) => {
+              const label = () => {
+                const epoch = props.epochMs;
+                if (epoch !== undefined && sameLocalDay(day.startMs, epoch)) return t().picker.today;
+                if (epoch !== undefined) {
+                  const next = new Date(epoch);
+                  next.setDate(next.getDate() + 1);
+                  if (sameLocalDay(day.startMs, next.getTime())) return t().picker.tomorrow;
+                }
+                return shortDay(day.startMs, t().locale);
+              };
+              const checked = () => activeDay()?.startMs === day.startMs;
+              return (
+                <label
+                  ref={(el) => {
+                    dayButtons[i()] = el;
+                  }}
+                  class={s.day}
+                  classList={{ [s.orientative ?? '']: day.orientative }}
+                >
+                  <input
+                    type="radio"
+                    name={`${uid}-day`}
+                    checked={checked()}
+                    disabled={props.disabled}
+                    onChange={() => props.onDay?.(day.startMs)}
+                    onKeyDown={(e) => {
+                      const days = props.days ?? [];
+                      let dir = 0;
+                      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') dir = 1;
+                      else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') dir = -1;
+                      if (!dir || props.disabled) return;
+                      const nextIndex = i() + dir;
+                      if (nextIndex < 0 || nextIndex >= days.length) return;
+                      e.preventDefault();
+                      const next = days[nextIndex];
+                      if (!next) return;
+                      props.onDay?.(next.startMs);
+                      queueMicrotask(() => dayButtons[days.indexOf(next)]?.querySelector('input')?.focus());
+                    }}
+                  />
+                  <Show when={day.orientative}>
+                    <span class={s.approx} aria-hidden="true">
+                      ≈
+                    </span>
+                  </Show>
+                  {label()}
+                  <Show when={day.orientative}>
+                    <span class="visually-hidden">, {t().picker.orientative}</span>
+                  </Show>
+                </label>
+              );
+            }}
+          </For>
+        </div>
+        <p class={s.dayNote} aria-live="polite">
+          <Show when={activeDay()?.orientative}>≈ {t().picker.orientativeNote}</Show>
+        </p>
+      </Show>
       {/* biome-ignore lint/a11y/useFocusableInteractive: tabindex dinámico (0, o -1 si está deshabilitado) */}
       <div
         ref={face}
@@ -364,7 +472,10 @@ export function DeparturePicker(props: DeparturePickerProps) {
           <div class={s.time}>
             <Odometer value={hhmm(snap(shown()))} />
           </div>
-          <div class={s.delta}>{delta() <= 0 ? t().picker.nowMark : t().picker.later(duration(delta()))}</div>
+          <div class={s.delta}>
+            <Show when={dayCaption()}>{(c) => <span class={s.when}>{c()} · </span>}</Show>
+            {delta() <= 0 ? t().picker.nowMark : t().picker.later(ahead(delta()))}
+          </div>
         </div>
       </div>
       <p id={`${uid}-hint`} class="visually-hidden">
