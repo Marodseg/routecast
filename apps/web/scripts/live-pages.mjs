@@ -39,7 +39,10 @@ try {
   await b.close();
   process.exit(1);
 }
-await p.waitForTimeout(8000);
+await p
+  .getByText('Consultando la previsión', { exact: false })
+  .waitFor({ state: 'detached', timeout: 90000 })
+  .catch(() => console.warn('previsión aún cargando a los 90 s'));
 const rows = await p.locator('section button[aria-pressed]').allInnerTexts();
 console.warn('RUTAS:', rows.map((r) => r.replace(/\s+/g, ' ').slice(0, 60)).join(' || '));
 const status = await p.locator('[role=status]').allInnerTexts();

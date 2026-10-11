@@ -177,12 +177,82 @@ describe('store', () => {
   });
 });
 
-describe('store: serie corta en caché como respaldo', () => {
+describe('store: previsión en dos fases', () => {
   const cells = () => uniqueCells(resample(route()).map((sample) => sample.at));
+  const never = (_c: readonly WeatherCell[], o: { signal: AbortSignal }) =>
+    new Promise<Result<HourlyWeather[]>>((res) =>
+      o.signal.addEventListener('abort', () => res({ ok: false, error: { kind: 'aborted' } })),
+    );
 
-  it('si la previsión falla, usa la serie corta y avisa de datos parciales (no de previsión caída)', async () => {
+  it('con una serie guardada que cubre la salida no espera a la red; el resto de la semana va en segundo plano', async () => {
     const cache = new WeatherCache(() => NOW, 60 * 60_000, false);
     await cache.putMany(cells().map((c) => shortSeries(c.key)));
+    const getHourly = vi.fn(never);
+    await createRoot(async (dispose) => {
+      const base = services(async () => ({ ok: true, value: [route()] }));
+      const s = createAppStore({ ...base, weather: { id: 'w', getHourly } }, { now: () => NOW, cache });
+      s.setFrom(A);
+      s.setTo(B);
+      await s.load();
+      expect(s.phase()).toBe('ready');
+      expect(s.weatherPending()).toBe(false);
+      expect(s.weatherPartial()).toBe(false);
+      expect(s.evaluated()[0]?.ev.risk.worstLevel).not.toBe('unknown');
+      expect(getHourly).toHaveBeenCalledOnce();
+      expect(getHourly.mock.calls[0]?.[1]).toMatchObject({ forecastDays: 7 });
+      dispose();
+    });
+  });
+
+  it('sin caché pide primero solo los días necesarios y después amplía a 7', async () => {
+    const days: (number | undefined)[] = [];
+    const getHourly = async (cs: readonly WeatherCell[], o: { signal: AbortSignal; forecastDays?: number }) => {
+      days.push(o.forecastDays);
+      return { ok: true as const, value: cs.map((c) => shortSeries(c.key, 24 * (o.forecastDays ?? 1) + 1)) };
+    };
+    await createRoot(async (dispose) => {
+      const base = services(async () => ({ ok: true, value: [route()] }));
+      const s = createAppStore(
+        { ...base, weather: { id: 'w', getHourly } },
+        { now: () => NOW, cache: new WeatherCache(() => NOW, 1, false) },
+      );
+      s.setFrom(A);
+      s.setTo(B);
+      await s.load();
+      await tick();
+      expect(days[0]).toBeLessThanOrEqual(2);
+      expect(days[1]).toBe(7);
+      dispose();
+    });
+  });
+
+  it('una salida aún sin previsión mientras se amplía se muestra como pendiente, no como «sin datos»', async () => {
+    let calls = 0;
+    const getHourly = (cs: readonly WeatherCell[], o: { signal: AbortSignal }) => {
+      calls++;
+      return calls === 1
+        ? Promise.resolve({ ok: true as const, value: cs.map((c) => shortSeries(c.key)) })
+        : never(cs, o);
+    };
+    await createRoot(async (dispose) => {
+      const base = services(async () => ({ ok: true, value: [route()] }));
+      const s = createAppStore(
+        { ...base, weather: { id: 'w', getHourly } },
+        { now: () => NOW, cache: new WeatherCache(() => NOW, 1, false) },
+      );
+      s.setFrom(A);
+      s.setTo(B);
+      await s.load();
+      expect(s.weatherPending()).toBe(false);
+      s.setDepartureMs(NOW + 4 * 24 * 3_600_000);
+      expect(s.weatherPending()).toBe(true);
+      dispose();
+    });
+  });
+
+  it('si la previsión falla y ninguna serie guardada llega a la salida: previsión caída (honesto), no «sin riesgo»', async () => {
+    const cache = new WeatherCache(() => NOW, 60 * 60_000, false);
+    await cache.putMany(cells().map((c) => shortSeries(c.key, 6)));
     await createRoot(async (dispose) => {
       const base = services(async () => ({ ok: true, value: [route()] }));
       const s = createAppStore(
@@ -191,32 +261,10 @@ describe('store: serie corta en caché como respaldo', () => {
       );
       s.setFrom(A);
       s.setTo(B);
+      s.setDepartureMs(NOW + 24 * 3_600_000);
       await s.load();
-      await tick();
-      expect(s.weatherError()).toBeNull();
-      expect(s.weatherPartial()).toBe(true);
-      expect(s.evaluated()[0]?.ev.risk.worstLevel).not.toBe('unknown');
-      dispose();
-    });
-  });
-
-  it('si la previsión llega a medias, las celdas que faltan usan la serie corta', async () => {
-    const cache = new WeatherCache(() => NOW, 60 * 60_000, false);
-    const all = cells();
-    await cache.putMany(all.map((c) => shortSeries(c.key)));
-    await createRoot(async (dispose) => {
-      const base = services(async () => ({ ok: true, value: [route()] }));
-      const getHourly = async (cs: readonly WeatherCell[]) => ({
-        ok: true as const,
-        value: cs.slice(0, 1).map((c) => shortSeries(c.key, 24 * 7)),
-      });
-      const s = createAppStore({ ...base, weather: { id: 'w', getHourly } }, { now: () => NOW, cache });
-      s.setFrom(A);
-      s.setTo(B);
-      await s.load();
-      await tick();
-      expect(s.weatherPartial()).toBe(all.length > 1);
-      expect(s.evaluated()[0]?.ev.points.every((p) => p.risk.level !== 'unknown')).toBe(true);
+      expect(s.weatherError()).toEqual({ kind: 'unavailable' });
+      expect(s.weatherPending()).toBe(false);
       dispose();
     });
   });

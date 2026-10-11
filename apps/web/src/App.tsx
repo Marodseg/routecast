@@ -206,7 +206,7 @@ export function App(props: { services?: Services }) {
   const partial = () => {
     // Mientras llega la previsión todo está «sin datos»: no es un hueco real, es que aún no ha llegado.
     const e = store.selectedEval();
-    return e && store.phase() === 'ready' ? partialNote(e.ev.points, t()) : null;
+    return e && store.phase() === 'ready' && !store.weatherPending() ? partialNote(e.ev.points, t()) : null;
   };
 
   const panel = () => (
@@ -267,7 +267,7 @@ export function App(props: { services?: Services }) {
       <div class={s.status} role="status" aria-live="polite">
         <Switch>
           <Match when={store.phase() === 'routing'}>{t().status.routing}</Match>
-          <Match when={store.phase() === 'weather'}>
+          <Match when={store.weatherPending()}>
             <div class={s.progress}>
               <span>{t().status.weather}</span>
               <Show when={store.weatherProgress()}>
@@ -356,7 +356,7 @@ export function App(props: { services?: Services }) {
             routes={compare()}
             selected={store.selected() ?? undefined}
             onSelect={store.setSelected}
-            loading={store.phase() === 'weather'}
+            loading={store.weatherPending()}
           />
 
           <Show when={worstPoint()}>
@@ -402,7 +402,7 @@ export function App(props: { services?: Services }) {
             )}
           </Show>
 
-          <Show when={store.phase() !== 'weather' && store.selectedEval()}>
+          <Show when={!store.weatherPending() && store.selectedEval()}>
             {(e) => (
               <RiskProfile
                 segments={e().ev.risk.segments}

@@ -16,6 +16,7 @@ import type { ProviderError, Warning } from '@routecast/shared/providers';
 import { batch, createEffect, createMemo, createSignal, onCleanup, untrack } from 'solid-js';
 import type { Services } from './services';
 import {
+  daysToCover,
   FORECAST_DAYS,
   horizonEndMs,
   localMidnightMs,
@@ -23,7 +24,7 @@ import {
   MIN_MS,
   nextStep,
   STEP_MIN,
-  seriesCoversHorizon,
+  seriesEndMs,
 } from './time';
 import { loadLast, saveLast, WeatherCache } from './weatherCache';
 
@@ -82,6 +83,8 @@ export function createAppStore(services: Services, opts: StoreOptions = {}) {
   const [weatherVersion, setWeatherVersion] = createSignal(0);
   /** Celdas con previsión ya resuelta durante la fase 'weather' (caché incluida); null fuera de ella. */
   const [weatherProgress, setWeatherProgress] = createSignal<{ done: number; total: number } | null>(null);
+  /** Se está ampliando la previsión al resto de la semana (fase 2, en segundo plano). */
+  const [extending, setExtending] = createSignal(false);
   const [usedProvider, setUsedProvider] = createSignal<string | null>(null);
   /** Se muestran rutas guardadas porque no hay conexión. */
   const [offline, setOffline] = createSignal(false);
@@ -217,25 +220,22 @@ export function createAppStore(services: Services, opts: StoreOptions = {}) {
 
     // Celdas únicas de todas las rutas: una sola tanda de peticiones (ARCHITECTURE §4.2).
     const cells = uniqueCells(next.flatMap((v) => v.samples.map((s) => s.at)));
+    routeCells = cells;
+    longestMs = Math.max(...next.map((v) => v.route.durationS)) * 1000;
     const cached = await cache.getMany(cells.map((x) => x.key));
     if (c.signal.aborted) return;
-    const now = clock();
-    // Una serie de 3 días, aún fresca, no puede tapar el día 5: si no llega al horizonte, se vuelve a pedir.
-    const short = new Map<string, HourlyWeather>();
-    for (const [k, h] of cached) {
-      if (seriesCoversHorizon(h.timesMs[h.timesMs.length - 1], now)) weather.set(k, h);
-      else short.set(k, h);
-    }
-    const missing = cells.filter((x) => {
-      const h = weather.get(x.key);
-      return !h || !seriesCoversHorizon(h.timesMs[h.timesMs.length - 1], now);
-    });
+    // Lo guardado vale aunque sea más corto que el horizonte: cubre la salida elegida y es respaldo si la red falla.
+    for (const [k, h] of cached) weather.set(k, h);
+
+    // Fase 1: solo los días que necesita la salida elegida (con carga, la latencia crece con celdas × días).
+    const quickUntil = untrack(departureMs) + longestMs + 2 * 3_600_000;
+    const missing = cells.filter((x) => lastStamp(x.key) < quickUntil);
     const have = cells.length - missing.length;
     setWeatherProgress({ done: have, total: cells.length });
     if (missing.length) {
       const w = await services.weather.getHourly(missing, {
         signal: c.signal,
-        forecastDays: FORECAST_DAYS,
+        forecastDays: daysToCover(quickUntil, clock()),
         onProgress: (done) => {
           if (!c.signal.aborted) setWeatherProgress({ done: have + done, total: cells.length });
         },
@@ -244,24 +244,57 @@ export function createAppStore(services: Services, opts: StoreOptions = {}) {
       if (w.ok) {
         for (const h of w.value) weather.set(h.cell, h);
         void cache.putMany(w.value);
-        const got = new Set(w.value.map((h) => h.cell));
-        for (const cell of missing) {
-          if (got.has(cell.key)) continue;
-          const fallback = short.get(cell.key);
-          if (fallback) weather.set(cell.key, fallback);
-        }
-        if (w.value.length < missing.length) setWeatherPartial(true);
-      } else if (short.size) {
-        for (const [k, h] of short) weather.set(k, h);
-        setWeatherPartial(true);
-      } else {
-        setWeatherError(w.error);
       }
+      // Lo que falte (lote fallido) sigue con la serie guardada si la había.
+      const uncovered = missing.filter((x) => lastStamp(x.key) < quickUntil).length;
+      if (!w.ok && uncovered === missing.length && have === 0) setWeatherError(w.error);
+      else if (uncovered > 0) setWeatherPartial(true);
     }
     batch(() => {
       setWeatherVersion((n) => n + 1);
       setWeatherProgress(null);
       setPhase('ready');
+    });
+    // Fase 2, en segundo plano: el resto de la semana (bandas del dial y otros días).
+    void extend(c);
+  }
+
+  /** Último sello de la serie de una celda (−∞ si no hay). */
+  function lastStamp(key: string): number {
+    const h = weather.get(key);
+    return h?.timesMs.length ? (h.timesMs[h.timesMs.length - 1] as number) : Number.NEGATIVE_INFINITY;
+  }
+
+  let routeCells: { key: string; at: Place['at'] }[] = [];
+  let longestMs = 0;
+  /** Amplía la previsión de las rutas actuales a todo el horizonte. Sin barra propia: solo se nota si hace falta. */
+  async function extend(c: AbortController): Promise<void> {
+    if (extending() || c.signal.aborted) return;
+    const now = clock();
+    const until = Math.min(horizonEndMs(now) + longestMs, seriesEndMs(now));
+    const missing = routeCells.filter((x) => lastStamp(x.key) < until);
+    if (!missing.length) return;
+    setExtending(true);
+    const have = routeCells.length - missing.length;
+    const w = await services.weather.getHourly(missing, {
+      signal: c.signal,
+      forecastDays: FORECAST_DAYS,
+      onProgress: (done) => {
+        if (!c.signal.aborted) setWeatherProgress({ done: have + done, total: routeCells.length });
+      },
+    });
+    if (c.signal.aborted) {
+      setExtending(false);
+      return;
+    }
+    batch(() => {
+      if (w.ok && w.value.length) {
+        for (const h of w.value) weather.set(h.cell, h);
+        void cache.putMany(w.value);
+        setWeatherVersion((n) => n + 1);
+      }
+      setWeatherProgress(null);
+      setExtending(false);
     });
   }
 
@@ -291,6 +324,28 @@ export function createAppStore(services: Services, opts: StoreOptions = {}) {
       evaluated().map((e) => ({ id: e.view.letter, durationS: e.view.route.durationS, risk: e.ev.risk, e })),
     ).map((x) => x.e),
   );
+
+  /** Hasta dónde llega la previsión de todas las celdas de las rutas actuales. */
+  const coveredUntil = createMemo(() => {
+    weatherVersion();
+    views();
+    return routeCells.length ? Math.min(...routeCells.map((x) => lastStamp(x.key))) : Number.NEGATIVE_INFINITY;
+  });
+  /**
+   * La salida elegida aún no tiene previsión pero está llegando: la UI muestra «calculando», no «sin datos».
+   * Fase 1 en curso, o fase 2 en curso y la salida cae más allá de lo ya descargado.
+   */
+  const weatherPending = createMemo(
+    () =>
+      phase() === 'weather' ||
+      (phase() === 'ready' && extending() && departureMs() + longestMs + 3_600_000 > coveredUntil()),
+  );
+  // Si la fase 2 falló y se elige un día sin previsión, se vuelve a intentar al elegirlo.
+  createEffect(() => {
+    const dep = departureMs();
+    if (phase() !== 'ready' || !ctrl || untrack(extending)) return;
+    if (dep + longestMs + 3_600_000 > untrack(coveredUntil)) void extend(ctrl);
+  });
 
   const selectedEval = createMemo(() => evaluated().find((e) => e.view.letter === selected()) ?? evaluated()[0]);
 
@@ -409,6 +464,7 @@ export function createAppStore(services: Services, opts: StoreOptions = {}) {
     selected,
     phase,
     weatherProgress,
+    weatherPending,
     routeError,
     weatherError,
     weatherPartial,

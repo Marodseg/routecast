@@ -47,6 +47,12 @@ export function horizonEndMs(nowMs: number): number {
   return Math.max(snapped, nextStep(nowMs));
 }
 
+/** Días de serie (`forecast_days`, desde la medianoche UTC de hoy) para que el último sello llegue a `untilMs`. */
+export function daysToCover(untilMs: number, nowMs: number): number {
+  const need = Math.ceil((untilMs - utcMidnightMs(nowMs) + 3_600_000) / (24 * 3_600_000));
+  return Math.min(FORECAST_DAYS, Math.max(1, need));
+}
+
 /** Una serie cacheada solo vale si su última hora llega al fin del horizonte. Si no, se vuelve a pedir. */
 export function seriesCoversHorizon(lastMs: number | undefined, nowMs: number): boolean {
   return lastMs !== undefined && lastMs >= horizonEndMs(nowMs);
