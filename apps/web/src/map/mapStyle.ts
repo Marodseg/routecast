@@ -51,9 +51,9 @@ export function lookFor(role: Role, c: ThemeColors): Look | null | undefined {
     case 'building':
       return null;
     case 'road':
-      return { color: toHex({ ...c.inkSubtle, alpha: 0.28 }) };
+      return { color: toHex({ ...c.inkSubtle, alpha: 0.2 }) };
     case 'roadMajor':
-      return { color: toHex({ ...c.inkMuted, alpha: 0.45 }) };
+      return { color: toHex({ ...c.inkSubtle, alpha: 0.32 }) };
     case 'boundary':
       return { color: toHex({ ...c.inkSubtle, alpha: 0.5 }) };
     case 'label':

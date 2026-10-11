@@ -2,6 +2,7 @@ import type { Place } from '@routecast/shared';
 import { batch, createEffect, createMemo, createSignal, Match, on, onCleanup, onMount, Show, Switch } from 'solid-js';
 import s from './App.module.css';
 import { explainFactor, partialNote } from './app/explain';
+import { loadGazetteer, mergePlaces, searchGazetteer } from './app/gazetteer';
 import { createServices, type Services } from './app/services';
 import { createAppStore } from './app/store';
 import { localHHMM, MIN_MS } from './app/time';
@@ -103,10 +104,18 @@ export function App(props: { services?: Services }) {
     setter(p);
     if (p) setRecent((list) => saveRecent(p, list));
   };
+  /**
+   * Nomenclátor propio primero (nombres en castellano y cooficiales, exónimos como «Hendaya») y Photon para pueblos
+   * pequeños y direcciones. Si Photon falla pero el nomenclátor encuentra algo, se muestra eso.
+   */
   const search = async (q: string, signal: AbortSignal) => {
-    const r = await services.geocoding.suggest(q, { signal });
-    if (!r.ok) throw new Error(r.error.kind);
-    return r.value;
+    const [index, photon] = await Promise.all([loadGazetteer(), services.geocoding.suggest(q, { signal })]);
+    const local = /\d/.test(q) ? [] : searchGazetteer(index, q, 5);
+    if (!photon.ok) {
+      if (local.length) return local;
+      throw new Error(photon.error.kind);
+    }
+    return mergePlaces(local, photon.value, q);
   };
 
   // --- Vistas derivadas ---
@@ -146,7 +155,9 @@ export function App(props: { services?: Services }) {
     store.evaluated().map(({ view, ev }) => {
       const ticks: { at: Place['at']; label: string }[] = [];
       const cum = view.route.cumDurationS;
-      for (let tS = 20 * 60, i = 0; tS < view.route.durationS - 8 * 60; tS += 20 * 60) {
+      // Marcas de hora legibles en cualquier longitud: el paso «redondo» más corto que deja ≤ 8 marcas.
+      const stepS = ([20, 30, 60, 90, 120, 180].find((m) => view.route.durationS / (m * 60) <= 8) ?? 240) * 60;
+      for (let tS = stepS, i = 0; tS < view.route.durationS - stepS / 3; tS += stepS) {
         while (i < cum.length - 1 && (cum[i] ?? 0) < tS) i++;
         const at = view.route.geometry[i];
         if (at) ticks.push({ at, label: localHHMM(store.departureMs() + tS * 1000) });

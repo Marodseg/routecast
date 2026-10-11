@@ -132,6 +132,8 @@ async function warnings(c: Context<AppEnv>) {
       const res = await load();
       if (res.ok) await cache.set(key, res.value, WARNINGS_TTL_S);
       else if (res.error.kind !== 'aborted') {
+        // Registro mínimo para diagnosticar fuentes caídas: sin coordenadas ni claves (ARCHITECTURE §8).
+        console.warn(JSON.stringify({ evt: 'source_error', key, error: res.error }));
         const wait = res.error.kind === 'rate_limited' ? Math.min(300, res.error.retryAfterS ?? 60) : 60;
         await cache.set(`${key}:err`, res.error, wait);
       }
@@ -157,6 +159,13 @@ async function warnings(c: Context<AppEnv>) {
     aemet: aemetResults === null ? 'skipped' : aemetResults.every((r) => r.ok) ? 'ok' : 'error',
     meteoalarm: meteoalarm.ok ? 'ok' : 'error',
   };
+  // Tipo de error por fuente (sin detalles internos ni claves): ayuda a diagnosticar desde fuera.
+  const errorOf = (r: WarningsResult) =>
+    r.ok ? undefined : `${r.error.kind}${'status' in r.error && r.error.status ? `:${r.error.status}` : ''}`;
+  const errors = {
+    ...(aemetResults?.some((x) => !x.ok) ? { aemet: errorOf(aemetResults.find((x) => !x.ok) as WarningsResult) } : {}),
+    ...(meteoalarm.ok ? {} : { meteoalarm: errorOf(meteoalarm) }),
+  };
   const lists = [
     ...(aemetResults ?? []).flatMap((r) => (r.ok ? [r.value] : [])),
     meteoalarm.ok ? meteoalarm.value : [],
@@ -174,6 +183,7 @@ async function warnings(c: Context<AppEnv>) {
     {
       warnings: located,
       partial: status.aemet !== 'ok' || status.meteoalarm !== 'ok',
+      ...(Object.keys(errors).length ? { errors } : {}),
       sources: status,
       generatedAt: now,
     },

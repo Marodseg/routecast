@@ -145,13 +145,22 @@ export function RouteMap(props: RouteMapProps) {
     const d = data();
     for (const [id, v] of Object.entries(d)) if (!m.getSource(id)) m.addSource(id, { type: 'geojson', data: v });
 
+    // Alternativas: trazo de tinta discontinuo sobre un borde claro, para no confundirse con las autovías del mapa base.
+    m.addLayer({
+      id: 'route-alt-casing',
+      type: 'line',
+      source: 'segments',
+      filter: ['==', ['get', 'sel'], false],
+      layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: { 'line-color': toHex(c.surface), 'line-width': 7 },
+    });
     m.addLayer({
       id: 'route-alt',
       type: 'line',
       source: 'segments',
       filter: ['==', ['get', 'sel'], false],
-      layout: { 'line-cap': 'round', 'line-join': 'round' },
-      paint: { 'line-color': toHex(c.inkMuted), 'line-width': 4, 'line-dasharray': [1, 1.5], 'line-opacity': 0.85 },
+      layout: { 'line-cap': 'butt', 'line-join': 'round' },
+      paint: { 'line-color': toHex(c.ink), 'line-width': 3, 'line-dasharray': [1.4, 1.2] },
     });
     m.addLayer({
       id: 'route-casing',

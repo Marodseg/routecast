@@ -155,7 +155,7 @@ export const es = {
   },
   confidence: { low: 'Previsión a más de 48 h: confianza baja.' },
   attribution:
-    '© OpenStreetMap contributors · OpenFreeMap · Weather data by Open-Meteo.com (CC-BY 4.0) · Routing by Valhalla (FOSSGIS) / OSRM / OpenRouteService · Avisos: Fuente: AEMET · Meteoalarm (EUMETNET)',
+    '© OpenStreetMap contributors · OpenFreeMap · Weather data by Open-Meteo.com (CC-BY 4.0) · Routing by Valhalla (FOSSGIS) / OSRM / OpenRouteService · Avisos: Fuente: AEMET · Meteoalarm (EUMETNET) · Lugares: Wikidata',
 };
 
 export type Dict = typeof es;
