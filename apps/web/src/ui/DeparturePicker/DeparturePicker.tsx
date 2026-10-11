@@ -68,11 +68,18 @@ export function DeparturePicker(props: DeparturePickerProps) {
     onCleanup(() => ro.disconnect());
   });
 
+  const shown = () => raw() ?? props.value;
+
   const geo = createMemo(() => {
     const w = width();
     const R = Math.max(150, w * 0.62);
     return { w, R, cx: w / 2, cy: 40 + R };
   });
+
+  /** Ventana visible: el dial (30°/h) da varias vueltas en 48 h; fuera de ±5 h no se dibuja nada. */
+  const VISIBLE_MIN = 5 * 60;
+  const windowStart = createMemo(() => Math.floor((shown() - VISIBLE_MIN) / 60) * 60);
+  const windowEnd = createMemo(() => Math.ceil((shown() + VISIBLE_MIN) / 60) * 60);
 
   const ticks = createMemo(() => {
     const { cx, cy, R } = geo();
@@ -84,7 +91,11 @@ export function DeparturePicker(props: DeparturePickerProps) {
       kind: 'major' | 'half' | 'minor';
       label?: [number, number, number, string];
     }[] = [];
-    for (let m = Math.ceil(props.min / 10) * 10; m <= props.max; m += 10) {
+    for (
+      let m = Math.max(Math.ceil(props.min / 10) * 10, windowStart());
+      m <= Math.min(props.max, windowEnd());
+      m += 10
+    ) {
       const a = (m - props.min) * DEG_PER_MIN;
       const kind = m % 60 === 0 ? 'major' : m % 30 === 0 ? 'half' : 'minor';
       const [x1, y1] = polar(cx, cy, R, a);
@@ -105,8 +116,8 @@ export function DeparturePicker(props: DeparturePickerProps) {
     return (props.bands ?? []).map((band, i) => {
       const r = R - 14 - i * BAND_GAP;
       const segs = band.levels.flatMap((level, h) => {
-        const from = Math.max(startHour + h * 60, props.min);
-        const to = Math.min(startHour + (h + 1) * 60, props.max + step());
+        const from = Math.max(startHour + h * 60, props.min, windowStart());
+        const to = Math.min(startHour + (h + 1) * 60, props.max + step(), windowEnd());
         if (to <= from) return [];
         return [
           {
@@ -120,7 +131,6 @@ export function DeparturePicker(props: DeparturePickerProps) {
     });
   });
 
-  const shown = () => raw() ?? props.value;
   const rotation = () => -(shown() - props.min) * DEG_PER_MIN;
   const nowMark = createMemo(() => {
     const { cx, cy, R } = geo();

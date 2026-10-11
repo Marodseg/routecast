@@ -42,7 +42,7 @@ export function LangToggle() {
       type="button"
       class={s.lang}
       lang={lang() === 'es' ? 'en' : 'es'}
-      aria-label={t().lang.switchTo}
+      aria-label={`${t().lang.short} · ${t().lang.switchTo}`}
       onClick={() => setLang(lang() === 'es' ? 'en' : 'es')}
     >
       {t().lang.short}

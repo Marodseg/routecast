@@ -98,8 +98,8 @@ export const fonts = {
 
 /** Escala tipográfica modular (~1,2) en px: [mínimo móvil, máximo escritorio]. */
 export const typeScale = {
-  xs: [10, 10],
-  sm: [12, 12],
+  xs: [11, 11],
+  sm: [12.5, 12.5],
   md: [14, 14.5],
   lg: [16, 17],
   xl: [20, 22],

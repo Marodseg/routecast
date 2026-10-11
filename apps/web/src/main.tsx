@@ -1,6 +1,6 @@
 import './boot';
 import { render } from 'solid-js/web';
-import { Home } from './Home';
+import { App } from './App';
 
 const root = document.getElementById('app');
-if (root) render(() => <Home />, root);
+if (root) render(() => <App />, root);

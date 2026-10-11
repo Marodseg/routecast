@@ -1,0 +1,342 @@
+import type { Place } from '@routecast/shared';
+import { batch, createEffect, createMemo, createSignal, Match, on, onCleanup, onMount, Show, Switch } from 'solid-js';
+import s from './App.module.css';
+import { explainFactor, partialNote } from './app/explain';
+import { createServices, type Services } from './app/services';
+import { createAppStore } from './app/store';
+import { localHHMM, MIN_MS } from './app/time';
+import { readUrl, writeUrl } from './app/url';
+import { t } from './i18n';
+import { effectiveTheme } from './lib/theme';
+import { MapPlaceholder } from './map/MapPlaceholder';
+import { RouteMap } from './map/RouteMap';
+import { BottomSheet, type Snap } from './ui/BottomSheet/BottomSheet';
+import { CommandSearch } from './ui/CommandSearch/CommandSearch';
+import { DeparturePicker } from './ui/DeparturePicker/DeparturePicker';
+import { EmptyState, Skeleton, Toaster } from './ui/Feedback/Feedback';
+import { Icon } from './ui/Icon/Icon';
+import { Legend } from './ui/Legend/Legend';
+import { RiskProfile } from './ui/RiskProfile/RiskProfile';
+import { RoadWind } from './ui/RoadWind/RoadWind';
+import { type CompareRoute, RouteCompare } from './ui/RouteCompare/RouteCompare';
+import { LangToggle, ThemeToggle } from './ui/Toggles/Toggles';
+
+const PROVIDER_LABEL: Record<string, string> = {
+  valhalla: 'Valhalla (FOSSGIS)',
+  'osrm-fossgis': 'OSRM (FOSSGIS)',
+  'osrm-demo': 'OSRM',
+};
+
+const RECENT_KEY = 'routecast:recent';
+function loadRecent(): Place[] {
+  try {
+    const v = JSON.parse(globalThis.localStorage?.getItem(RECENT_KEY) ?? '[]');
+    return Array.isArray(v) ? (v as Place[]).slice(0, 5) : [];
+  } catch {
+    return [];
+  }
+}
+function saveRecent(p: Place, list: Place[]): Place[] {
+  const next = [p, ...list.filter((x) => x.id !== p.id && x.name !== p.name)].slice(0, 5);
+  try {
+    globalThis.localStorage?.setItem(RECENT_KEY, JSON.stringify(next));
+  } catch {
+    // Sin persistencia: no pasa nada.
+  }
+  return next;
+}
+
+export function App(props: { services?: Services }) {
+  const services = props.services ?? createServices();
+  const store = createAppStore(services);
+  const [recent, setRecent] = createSignal(loadRecent());
+  const [snap, setSnap] = createSignal<Snap>('half');
+  const mq = globalThis.matchMedia?.('(min-width: 1024px)');
+  const [desktop, setDesktop] = createSignal(mq?.matches ?? true);
+  onMount(() => {
+    const onChange = (e: MediaQueryListEvent) => setDesktop(e.matches);
+    mq?.addEventListener('change', onChange);
+    onCleanup(() => mq?.removeEventListener('change', onChange));
+  });
+  let mapEl: HTMLDivElement | undefined;
+  /** MapLibre solo cuando aporta algo (hay consulta) o se toca el mapa: la portada carga ligera. */
+  const [mapWanted, setMapWanted] = createSignal(false);
+  const showMap = () => mapWanted() || (!!store.from() && !!store.to());
+
+  // --- Estado inicial desde la URL (SPEC F14) ---
+  const url = readUrl(globalThis.location?.search ?? '');
+  batch(() => {
+    if (url.from) store.setFrom(url.from);
+    if (url.to) store.setTo(url.to);
+    if (url.departureMs && url.departureMs > store.nowMs()) store.setDepartureMs(url.departureMs);
+    if (url.route) store.setSelected(url.route);
+  });
+
+  createEffect(on([store.from, store.to], () => void store.load()));
+
+  createEffect(() => {
+    const q = writeUrl({
+      ...(store.from() ? { from: store.from() as Place } : {}),
+      ...(store.to() ? { to: store.to() as Place } : {}),
+      departureMs: store.departureMs(),
+      ...(store.selected() ? { route: store.selected() as string } : {}),
+    });
+    try {
+      globalThis.history?.replaceState(null, '', `${globalThis.location.pathname}${q}`);
+    } catch {
+      // Entornos sin historial (tests): se ignora.
+    }
+  });
+
+  const choose = (setter: (p: Place | null) => void) => (p: Place | null) => {
+    setter(p);
+    if (p) setRecent((list) => saveRecent(p, list));
+  };
+  const search = async (q: string, signal: AbortSignal) => {
+    const r = await services.geocoding.suggest(q, { signal });
+    if (!r.ok) throw new Error(r.error.kind);
+    return r.value;
+  };
+
+  // --- Vistas derivadas ---
+  const compare = createMemo<CompareRoute[]>(() =>
+    store.ranked().map(({ view, ev }) => {
+      const worst = ev.risk.worstPoint === null ? undefined : ev.points[ev.risk.worstPoint];
+      const level = ev.risk.worstLevel;
+      return {
+        id: view.letter,
+        name: view.route.name || t().route.unnamed,
+        via: PROVIDER_LABEL[view.route.provider] ?? view.route.provider,
+        distanceKm: Math.round(view.route.distanceM / 1000),
+        durationMin: Math.round(view.route.durationS / 60),
+        arrival: localHHMM(store.departureMs() + view.route.durationS * 1000),
+        worst: level,
+        kmHigh: Math.round(ev.risk.kmAtLevel2Plus),
+        profile: ev.risk.segments,
+        ...(worst && level !== 'unknown' && level > 0
+          ? {
+              worstText: `${t().explain.at(localHHMM(worst.sample.etaMs), Math.round(worst.sample.kmFromStart))} · ${explainFactor(worst, t())}`,
+            }
+          : {}),
+      };
+    }),
+  );
+
+  const worstPoint = createMemo(() => {
+    const e = store.selectedEval();
+    if (!e || e.ev.risk.worstPoint === null) return null;
+    const lvl = e.ev.risk.worstLevel;
+    if (lvl === 'unknown' || lvl === 0) return null;
+    return e.ev.points[e.ev.risk.worstPoint] ?? null;
+  });
+
+  const mapRoutes = createMemo(() =>
+    store.evaluated().map(({ view, ev }) => {
+      const ticks: { at: Place['at']; label: string }[] = [];
+      const cum = view.route.cumDurationS;
+      for (let tS = 20 * 60, i = 0; tS < view.route.durationS - 8 * 60; tS += 20 * 60) {
+        while (i < cum.length - 1 && (cum[i] ?? 0) < tS) i++;
+        const at = view.route.geometry[i];
+        if (at) ticks.push({ at, label: localHHMM(store.departureMs() + tS * 1000) });
+      }
+      return { letter: view.letter, geometry: view.route.geometry, cumM: view.cumM, segments: ev.risk.segments, ticks };
+    }),
+  );
+
+  const valueText = (m: number) => {
+    const e = store.selectedEval();
+    const time = localHHMM(store.dayStart() + m * MIN_MS);
+    if (!e) return t().picker.valueText(time, '—', '—');
+    const lvl = e.ev.risk.worstLevel;
+    return t().picker.valueText(
+      time,
+      e.view.letter,
+      lvl === 'unknown' ? t().risk.unknown : (t().risk.levels[lvl] ?? ''),
+    );
+  };
+
+  const lowConfidence = () => store.selectedEval()?.ev.points.some((p) => p.confidence === 'low') ?? false;
+  const partial = () => {
+    const e = store.selectedEval();
+    return e ? partialNote(e.ev.points, t()) : null;
+  };
+
+  const panel = () => (
+    <div class={s.panelInner}>
+      <header class={s.bar}>
+        <span class={s.brand}>
+          <i class={s.mark} aria-hidden="true" />
+          <span>Routecast</span>
+        </span>
+        <span class={s.tools}>
+          <LangToggle />
+          <ThemeToggle />
+        </span>
+      </header>
+
+      <div class={`${s.query} plate`}>
+        <CommandSearch
+          label={t().search.from}
+          value={store.from()}
+          onSelect={choose(store.setFrom)}
+          search={search}
+          recent={recent()}
+        />
+        <button
+          type="button"
+          class={s.swap}
+          aria-label={t().search.swap}
+          onClick={() => store.swap()}
+          disabled={!store.from() && !store.to()}
+        >
+          <Icon name="swap" size={16} />
+        </button>
+        <CommandSearch
+          label={t().search.to}
+          value={store.to()}
+          onSelect={choose(store.setTo)}
+          search={search}
+          recent={recent()}
+        />
+      </div>
+
+      <Show when={store.views().length}>
+        <DeparturePicker
+          value={store.departureMinutes()}
+          onChange={store.setDepartureMinutes}
+          min={store.pickerMin()}
+          max={store.pickerMax()}
+          now={store.pickerMin()}
+          bands={store.bands()}
+          selected={store.selected() ?? undefined}
+          valueText={valueText}
+        />
+      </Show>
+
+      <div class={s.status} role="status" aria-live="polite">
+        <Switch>
+          <Match when={store.phase() === 'routing'}>{t().status.routing}</Match>
+          <Match when={store.phase() === 'weather'}>{t().status.weather}</Match>
+        </Switch>
+        <Show when={store.weatherError()}>
+          <p class={s.warn}>
+            <Icon name="warning" size={14} />{' '}
+            {store.weatherError()?.kind === 'rate_limited' ? t().status.rateLimited : t().status.weatherDown}
+          </p>
+        </Show>
+        <Show when={store.usedProvider() && store.usedProvider() !== 'valhalla'}>
+          <p class={s.note}>{t().status.fallback}</p>
+        </Show>
+        <Show when={partial()}>{(n) => <p class={s.note}>{n()}</p>}</Show>
+        <Show when={lowConfidence()}>
+          <p class={s.note}>{t().confidence.low}</p>
+        </Show>
+      </div>
+
+      <Switch>
+        <Match when={store.phase() === 'error'}>
+          <EmptyState
+            icon="warning"
+            tone="warning"
+            title={store.routeError()?.kind === 'no_route' ? t().empty.noRouteTitle : t().status.routingDown}
+            body={store.routeError()?.kind === 'no_route' ? t().empty.noRouteBody : t().status.rateLimited}
+            action={{ label: t().status.retry, onClick: () => void store.load() }}
+          />
+        </Match>
+        <Match when={store.phase() === 'routing'}>
+          <Skeleton lines={4} />
+        </Match>
+        <Match when={!store.from() || !store.to()}>
+          <EmptyState icon="route" title={t().empty.startTitle} body={t().empty.startBody} />
+        </Match>
+        <Match when={store.views().length}>
+          <RouteCompare
+            routes={compare()}
+            selected={store.selected() ?? undefined}
+            onSelect={store.setSelected}
+            loading={store.phase() === 'weather'}
+          />
+
+          <Show when={worstPoint()}>
+            {(p) => (
+              <section
+                class={`${s.readout} plate`}
+                aria-label={t().route.worstPoint(store.selected() ?? '', localHHMM(p().sample.etaMs))}
+              >
+                <div>
+                  <span class="label">{t().route.worstPoint(store.selected() ?? '', localHHMM(p().sample.etaMs))}</span>
+                  <p class={s.big}>{explainFactor(p(), t())}</p>
+                  <p class={s.where}>
+                    {t().explain.at(localHHMM(p().sample.etaMs), Math.round(p().sample.kmFromStart))}
+                  </p>
+                </div>
+                <Show when={p().risk.values.windFromDeg !== undefined && p().risk.values.windFromDeg !== null}>
+                  <RoadWind
+                    headingDeg={p().sample.headingDeg}
+                    windFromDeg={p().risk.values.windFromDeg ?? Number.NaN}
+                    gustKmH={p().risk.values.gustsKmH ?? Number.NaN}
+                    level={p().risk.factors.crosswind}
+                    size={104}
+                  />
+                </Show>
+              </section>
+            )}
+          </Show>
+
+          <Show when={store.selectedEval()}>
+            {(e) => (
+              <RiskProfile
+                segments={e().ev.risk.segments}
+                totalKm={e().view.route.distanceM / 1000}
+                routeId={e().view.letter}
+                variant="full"
+              />
+            )}
+          </Show>
+        </Match>
+      </Switch>
+
+      <Legend open={desktop()} />
+      <footer class={s.footer}>
+        <p>{t().attribution}</p>
+        <p>
+          <a href="./dev/gallery/">{t().app.gallery}</a>
+        </p>
+      </footer>
+    </div>
+  );
+
+  return (
+    <main class={s.app}>
+      <h1 class="visually-hidden">Routecast</h1>
+      <div class={s.mapArea} ref={mapEl}>
+        <Show when={showMap()} fallback={<MapPlaceholder onActivate={() => setMapWanted(true)} />}>
+          <RouteMap
+            routes={mapRoutes()}
+            selected={store.selected()}
+            onSelect={store.setSelected}
+            worst={worstPoint()?.sample.at ?? null}
+            dark={effectiveTheme() === 'dark'}
+            padding={() =>
+              desktop() ? { top: 48, right: 48, bottom: 48, left: 468 } : { top: 40, right: 32, bottom: 320, left: 32 }
+            }
+            label={t().app.tagline}
+          />
+        </Show>
+      </div>
+      <Show
+        when={desktop()}
+        fallback={
+          <BottomSheet snap={snap()} onSnap={setSnap} inertTarget={() => mapEl}>
+            {panel()}
+          </BottomSheet>
+        }
+      >
+        <aside class={s.panel} aria-label={t().compare.caption}>
+          {panel()}
+        </aside>
+      </Show>
+      <Toaster />
+    </main>
+  );
+}
