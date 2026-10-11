@@ -84,6 +84,22 @@ export const en: Dict = {
     levels: { yellow: 'Yellow', orange: 'Orange', red: 'Red' },
     source: (s) => `Source: ${s}`,
     partial: 'Some warnings could not be loaded.',
+    unavailable: 'Official warnings are not available right now: check aemet.es before you set off.',
+    loading: 'Checking official warnings…',
+    stretch: (from, to, time) => `km ${from}–${to} · you pass around ${time}`,
+    onRoute: (n) => (n === 1 ? '1 warning' : `${n} warnings`),
+    kinds: {
+      wind: 'Wind',
+      rain: 'Rain',
+      snow: 'Snow',
+      storm: 'Thunderstorms',
+      fog: 'Fog',
+      heat: 'High temperatures',
+      cold: 'Low temperatures',
+      coastal: 'Coastal events',
+      dust: 'Dust',
+      other: 'Other',
+    },
   },
   empty: {
     startTitle: 'Where to?',
@@ -141,5 +157,5 @@ export const en: Dict = {
   },
   confidence: { low: 'Forecast beyond 48 h: low confidence.' },
   attribution:
-    '© OpenStreetMap contributors · OpenFreeMap · Weather data by Open-Meteo.com (CC-BY 4.0) · Routing by Valhalla (FOSSGIS) / OSRM / OpenRouteService · Warnings: AEMET / Meteoalarm (EUMETNET)',
+    '© OpenStreetMap contributors · OpenFreeMap · Weather data by Open-Meteo.com (CC-BY 4.0) · Routing by Valhalla (FOSSGIS) / OSRM / OpenRouteService · Warnings: Source: AEMET · Meteoalarm (EUMETNET)',
 };

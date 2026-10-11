@@ -70,3 +70,23 @@ test('sin violaciones de accesibilidad con resultados', async ({ page }) => {
   const axe = await new AxeBuilder({ page }).analyze();
   expect(axe.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`)).toEqual([]);
 });
+
+test('avisos oficiales: la ruta que cruza la zona en la ventana muestra el aviso y su tramo', async ({ page }) => {
+  await mockNetwork(page);
+  await page.goto('/?from=36.72130,-4.42140,M%C3%A1laga&to=37.17350,-3.59953,Granada&r=A');
+  await expect(compareRows(page)).toHaveCount(2);
+  const rowA = compareRows(page).filter({ hasText: 'A-45 · A-92' });
+  await expect(rowA).toContainText('1 aviso');
+  await expect(compareRows(page).filter({ hasText: 'A-7 · A-44' })).not.toContainText('aviso');
+  await expect(page.getByText('1 aviso en tu ruta')).toBeVisible();
+  await page.getByText('1 aviso en tu ruta').click();
+  await expect(page.getByText(/Antequera · km \d+–\d+ · pasas hacia las/)).toBeVisible();
+  await expect(page.locator('details').filter({ hasText: '1 aviso en tu ruta' }).getByText('Fuente: AEMET')).toBeVisible();
+});
+
+test('Worker caído: rutas y riesgo siguen y se avisa de que no hay avisos oficiales disponibles', async ({ page }) => {
+  await mockNetwork(page, { warnings: 'down' });
+  await page.goto('/?from=36.72130,-4.42140,M%C3%A1laga&to=37.17350,-3.59953,Granada');
+  await expect(compareRows(page)).toHaveCount(2);
+  await expect(page.getByText('Los avisos oficiales no están disponibles', { exact: false })).toBeVisible();
+});

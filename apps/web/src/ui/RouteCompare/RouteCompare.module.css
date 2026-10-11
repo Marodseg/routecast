@@ -144,3 +144,16 @@
     margin-bottom: 2px;
   }
 }
+
+.alerts {
+  grid-column: 1 / -1;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font: 600 var(--text-sm) / 1.2 var(--font-display);
+  color: var(--danger);
+}
+
+.selected .alerts {
+  color: inherit;
+}

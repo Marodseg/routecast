@@ -14,7 +14,7 @@ Contexto de uso: proyecto personal/portfolio **sin monetización**. Si eso cambi
 | Valhalla demo (FOSSGIS) | Rutas (primario: alternativas reales) | No | Uso justo; ~1 req/s por IP y 100 req/s globales **[NO CONFIRMADO, fuente secundaria]** | Uso razonable no comercial; sin SLA; sin cabecera obligatoria conocida |
 | OpenRouteService | Rutas (fallback vía Worker) | Sí | Directions 2.000/día, 40/min | No comercial; clave solo en Worker |
 | GraphHopper | No usar de entrada | Sí | 500 créditos/día, 5 puntos | No comercial; demasiado limitado |
-| AEMET OpenData | Avisos/predicción España | Sí (gratuita) | Límite por minuto estricto (~80/min observado) | Citar AEMET; clave solo en Worker; caídas intermitentes |
+| AEMET OpenData | Avisos/predicción España | Sí (gratuita) | Sin cifra oficial legible; 50/min según fuente secundaria **[VERIFICAR]** | Citar «Fuente: AEMET» o «© AEMET»; no desnaturalizar; clave solo en Worker; caídas intermitentes |
 | Meteoalarm | Avisos Europa | No (feeds/API pública) | No publicado **[VERIFICAR]** | Datos CC-BY (EUMETNET) |
 | MET Norway (Locationforecast) | Previsión alternativa | No | "Buena capacidad", sin cifra | User-Agent identificable obligatorio; sin SLA |
 | Photon (komoot) | Geocodificación/autocompletado | No | Uso razonable, se limita si se abusa | Sin garantías |
@@ -67,17 +67,70 @@ Contexto de uso: proyecto personal/portfolio **sin monetización**. Si eso cambi
 
 ### OpenRouteService (vía Worker)
 - Plan gratuito estándar: Directions 2.000/día y 40/min (página oficial de planes). Otras fuentes secundarias hablan de >8.000/día en total entre endpoints; **vale la cifra oficial**.
-- No comercial. Requiere clave (secreto del Worker). Alternativas de ruta: parámetro `alternative_routes`; límites de distancia/longitud en la API pública **[VERIFICAR]**.
+- No comercial. Requiere clave (secreto del Worker). Plan Standard 0 € (límites en https://account.heigit.org/info/plans);
+  el plan Collaborative prohíbe uso comercial.
+- **`alternative_routes` (revisado 2026-10-11, https://openrouteservice.org/restrictions/)**: distancia máxima documentada
+  **100 km** (150 km con áreas a evitar), máx. 3 rutas. En la prueba real Málaga → Granada (126 km) devolvió 3 rutas, así
+  que hoy no se aplica de forma estricta, pero no es fiable: el adaptador reintenta sin alternativas ante cualquier 4xx.
+  Valores por defecto `weight_factor` 1,4 y `share_factor` 0,6; el proyecto usa 1,6 y 0,6
+  (https://ask.openrouteservice.org/t/alternative-routes/5693).
+- **Atribución**: los ToS (https://openrouteservice.org/?p=940) exigen atribución adecuada para las APIs gratuitas; texto
+  exacto no legible automáticamente **[VERIFICAR]**. Se muestra «openrouteservice» en la ruta que procede de este
+  proveedor y en el pie.
+- **Tope propio**: el Worker corta en 1.500 peticiones/día (contador por isolate/centro de datos, aproximado) y cachea
+  1 h por coordenadas redondeadas a 4 decimales.
 - Fuente: https://openrouteservice.org/plans/
+- **Verificado 2026-10-11** (petición real, Málaga → Granada): `POST /v2/directions/driving-car/geojson` con
+  `Authorization: <clave>` y `alternative_routes: { target_count: 3, weight_factor: 1.6, share_factor: 0.6 }` devolvió
+  **3 rutas** (126, 148 y 148 km). Cabeceras observadas: `x-ratelimit-limit: 200`, `x-ratelimit-remaining`,
+  `x-ratelimit-reset` (unix). Los tiempos por paso (`steps[].duration` con `way_points`) permiten la ETA por vértice.
+  Los nombres de vía de autovías llegan a menudo como `-`. Códigos de error 2009 (sin ruta) / 2010 (punto fuera de la red)
+  según la documentación de errores de ORS **[VERIFICAR con una respuesta real]**.
+- Desde esta red de desarrollo hubo timeouts de conexión intermitentes a `api.openrouteservice.org` (2026-10-11).
 
 ### AEMET OpenData
 - Clave gratuita en https://opendata.aemet.es/centrodedescargas/altaUsuario. **Solo en servidor.**
 - Patrón de dos pasos: la primera respuesta contiene una URL (`datos`) con los datos reales; hay que pedirla. Reintentos con backoff ante 429; se han observado cortes/caídas sostenidas.
 - Avisos por comunidad autónoma y predicción por municipio (códigos INE). Citar a AEMET como origen.
+- **Avisos CAP (verificado 2026-10-11)**: `GET /opendata/api/avisos_cap/ultimoelaborado/area/{area}` con cabecera
+  `api_key`. Códigos de área (especificación oficial): `esp` España, 61 Andalucía, 62 Aragón, 63 Asturias,
+  64 Baleares, 65 Canarias, 66 Cantabria, 67 Castilla y León, 68 Castilla-La Mancha, 69 Cataluña, 70 Extremadura,
+  71 Galicia, 72 Madrid, 73 Murcia, 74 Navarra, 75 País Vasco, 76 La Rioja, 77 C. Valenciana, 78 Ceuta, 79 Melilla.
+  - Paso 1: JSON `{ descripcion, estado, datos, metadatos }` (Content-Type declara ISO-8859-15; el JSON es ASCII).
+    Los errores también llegan con HTTP 200 y `estado` 4xx/5xx en el cuerpo.
+  - Paso 2: `datos` (en `opendata.aemet.es`) devuelve `application/x-gtar` con un XML CAP 1.2 **en UTF-8** por
+    fenómeno: AT temp. máximas, BT mínimas, CO costeros, NE nevadas, NI nieblas, PR lluvias, TO tormentas, VI vientos,
+    VS polvo. Cada fichero lleva un `<info>` por idioma (es-ES, en-GB) y **todas** las zonas, también las de nivel
+    «verde» (sin aviso). Nivel en `AEMET-Meteoalerta nivel` (verde/amarillo/naranja/rojo), zona en
+    `AEMET-Meteoalerta zona` y polígono `lat,lon` en `<polygon>`. Andalucía ≈ 430 KB, Baleares ≈ 120 KB.
+  - El proyecto genera una tabla estática de 233 zonas con `packages/providers/scripts/build-aemet-zones.mjs`.
+  - Fuente: https://opendata.aemet.es/AEMET_OpenData_specification.json
+- **Condiciones de reutilización (revisado 2026-10-11, https://www.aemet.es/es/nota_legal)**: autorización gratuita y no
+  exclusiva para fines comerciales y no comerciales. Atribución obligatoria: «© AEMET» o «Información elaborada por la
+  Agencia Estatal de Meteorología»; en servicios de valor añadido, «Fuente: AEMET» o «Información elaborada utilizando,
+  entre otras, la obtenida de la Agencia Estatal de Meteorología». Prohibido desnaturalizar el sentido de la información
+  y sugerir que AEMET participa, patrocina o respalda el servicio. Conservar la fecha de actualización y los metadatos de
+  condiciones cuando aparezcan en el original. El pie de la web dice «Avisos: Fuente: AEMET · Meteoalarm (EUMETNET)».
+- **Límite por minuto**: no figura en una fuente oficial legible. Un blog de datos.gob.es (2026-03-18,
+  https://datos.gob.es/es/blog/api-en-las-administraciones-publicas-cuales-hay-y-como-utilizarlas) cita 50 peticiones/min;
+  la cifra «~80/min» anterior era una observación sin fuente. Tope de diseño: 50/min. FAQ oficial (v1.4, jul-2025):
+  https://opendata.aemet.es/centrodedescargas/docs/FAQs170621.pdf **[VERIFICAR a mano, PDF comprimido]**. Cada comunidad
+  cuesta 2 peticiones (metadatos + tar): el Worker pide como máximo 4 comunidades por consulta, deduplica descargas
+  simultáneas, cachea 10 min y guarda los fallos 60 s (o lo que diga `Retry-After`).
 - Fuentes: https://wetterdienst.readthedocs.io/en/latest/data/provider/aemet/observation/index.html · https://glama.ai/mcp/servers/rldona/aemet-mcp
 
 ### Meteoalarm
 - Portal de API: https://api.meteoalarm.org/ (EDR GeoJSON, MQTT, REST, feeds Atom por país y Europa). Detalle de autenticación y límites **[VERIFICAR]**.
+- **Verificado 2026-10-11**: `https://feeds.meteoalarm.org/feeds/meteoalarm-legacy-atom-spain` (Atom, sin clave, ~7 KB,
+  solo avisos vigentes) con `cap:areaDesc`, `cap:geocode` (EMMA_ID), `cap:severity` (Moderate/Severe/Extreme =
+  amarillo/naranja/rojo), `cap:onset`/`cap:expires` y título «Yellow Rain Warning issued for Spain - …». **Sin
+  polígonos**: el proyecto los obtiene de la tabla de zonas de AEMET por nombre (Meteoalarm reproduce los avisos de AEMET).
+  El JSON `/api/v1/warnings/feeds-spain` pesa ~1,9 MB e incluye avisos caducados: no se usa (CPU del Worker).
+- Licencia en el propio feed: «Licensed under terms equivalent to CC BY 4.0, with additional requirements for
+  redistributing outlined in our Terms and Conditions». Los términos (https://meteoalarm.org/en/live/page/terms-and-conditions)
+  no se pudieron leer de forma automática (página renderizada con JS, ≈ 420 KB; sin texto de redistribución en los
+  primeros 300.000 caracteres, revisado 2026-10-11). Existe una categoría «Redistributors» **[VERIFICAR a mano antes de
+  publicar]** si hay requisitos de atribución o prohibición de alterar los avisos al reexponerlos desde nuestro Worker.
 - Uso previsto: complemento a AEMET y base para extender a Europa.
 
 ### MET Norway

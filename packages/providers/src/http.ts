@@ -76,3 +76,75 @@ export async function getJson<S extends z.ZodType>(url: string, o: GetJsonOption
     o.signal.removeEventListener('abort', onAbort);
   }
 }
+
+export interface GetBytesOptions {
+  signal: AbortSignal;
+  timeoutMs?: number;
+  init?: RequestInit;
+  fetchImpl?: typeof fetch;
+  /** Tamaño máximo aceptado (bytes): una respuesta desmesurada es un error, no un cuelgue. */
+  maxBytes?: number;
+}
+
+/** Como `getJson` pero devuelve el cuerpo en bruto (tar de AEMET, XML de Meteoalarm). */
+export async function getBytes(url: string, o: GetBytesOptions): Promise<Result<Uint8Array>> {
+  if (o.signal.aborted) return err({ kind: 'aborted' });
+  const ctrl = new AbortController();
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    ctrl.abort();
+  }, o.timeoutMs ?? 15_000);
+  const onAbort = () => ctrl.abort();
+  o.signal.addEventListener('abort', onAbort, { once: true });
+  const fail = (): Result<never> =>
+    err(o.signal.aborted ? { kind: 'aborted' } : timedOut ? { kind: 'timeout' } : { kind: 'unavailable' });
+  try {
+    let res: Response;
+    try {
+      res = await (o.fetchImpl ?? fetch)(url, { ...o.init, signal: ctrl.signal });
+    } catch {
+      return fail();
+    }
+    if (res.status === 429) {
+      const retryAfterS = parseRetryAfter(res.headers.get('retry-after'));
+      return err(retryAfterS === undefined ? { kind: 'rate_limited' } : { kind: 'rate_limited', retryAfterS });
+    }
+    if (res.status >= 500) return err({ kind: 'unavailable', status: res.status });
+    if (res.status >= 400) return err({ kind: 'bad_response', detail: `HTTP ${res.status}` });
+    const max = o.maxBytes ?? Number.POSITIVE_INFINITY;
+    const declared = Number(res.headers.get('content-length'));
+    const tooBig = (n: number): Result<never> =>
+      err({ kind: 'bad_response', detail: `respuesta de más de ${max} B (${n} B)` });
+    if (Number.isFinite(declared) && declared > max) return tooBig(declared);
+    // Lectura en streaming con contador: un cuerpo desmesurado se corta sin cargarlo entero en memoria.
+    const chunks: Uint8Array[] = [];
+    let total = 0;
+    try {
+      const reader = res.body?.getReader();
+      if (!reader) return ok(new Uint8Array(await res.arrayBuffer()));
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        total += value.byteLength;
+        if (total > max) {
+          await reader.cancel();
+          return tooBig(total);
+        }
+        chunks.push(value);
+      }
+    } catch {
+      return fail();
+    }
+    const out = new Uint8Array(total);
+    let offset = 0;
+    for (const c of chunks) {
+      out.set(c, offset);
+      offset += c.byteLength;
+    }
+    return ok(out);
+  } finally {
+    clearTimeout(timer);
+    o.signal.removeEventListener('abort', onAbort);
+  }
+}

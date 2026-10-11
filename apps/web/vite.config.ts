@@ -14,10 +14,49 @@ function designTokens(): Plugin {
   };
 }
 
+/** Orígenes a los que la web puede conectar (ARCHITECTURE §11). Añadir aquí cualquier proveedor nuevo. */
+const CONNECT = [
+  'https://api.open-meteo.com',
+  'https://photon.komoot.io',
+  'https://valhalla1.openstreetmap.de',
+  'https://routing.openstreetmap.de',
+  'https://router.project-osrm.org',
+  'https://tiles.openfreemap.org',
+];
+
+/** CSP estricta en el HTML construido (en desarrollo no: Vite inyecta estilos y websockets). */
+function csp(): Plugin {
+  return {
+    name: 'routecast-csp',
+    apply: 'build',
+    transformIndexHtml(html) {
+      const api = process.env.VITE_API_BASE ? new URL(process.env.VITE_API_BASE).origin : '';
+      const policy = [
+        "default-src 'self'",
+        "script-src 'self'",
+        // Solid aplica algunos estilos como atributo; los scripts siguen estrictos (ADR-0009).
+        "style-src 'self' 'unsafe-inline'",
+        "img-src 'self' data: blob:",
+        "font-src 'self'",
+        "worker-src 'self' blob:",
+        `connect-src 'self' ${[...CONNECT, api].filter(Boolean).join(' ')}`,
+        "manifest-src 'self'",
+        "base-uri 'self'",
+        "form-action 'none'",
+        "object-src 'none'",
+      ].join('; ');
+      const anchor = '<meta charset="UTF-8" />';
+      // Fail-closed: sin el ancla el build se detiene en vez de publicar sin CSP.
+      if (!html.includes(anchor)) throw new Error('CSP: no se encontró <meta charset> en el HTML');
+      return html.replace(anchor, `${anchor}\n    <meta http-equiv="Content-Security-Policy" content="${policy}" />`);
+    },
+  };
+}
+
 // En GitHub Pages el sitio vive bajo /<repo>/; el workflow de deploy fija BASE_PATH.
 export default defineConfig({
   base: process.env.BASE_PATH ?? '/',
-  plugins: [designTokens(), solid()],
+  plugins: [designTokens(), solid(), csp()],
   build: {
     target: 'es2022',
     sourcemap: true,

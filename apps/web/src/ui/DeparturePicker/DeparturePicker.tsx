@@ -3,6 +3,7 @@ import { createMemo, createSignal, createUniqueId, For, onCleanup, onMount, Show
 import { t } from '../../i18n';
 import { duration, hhmm } from '../../lib/format';
 import { prefersReducedMotion, tick } from '../../lib/motion';
+import { Odometer } from '../Odometer/Odometer';
 import s from './DeparturePicker.module.css';
 
 export interface DialBand {
@@ -360,7 +361,9 @@ export function DeparturePicker(props: DeparturePickerProps) {
         </svg>
         <div class={s.fade} aria-hidden="true" />
         <div class={s.readout} aria-hidden="true">
-          <div class={s.time}>{hhmm(snap(shown()))}</div>
+          <div class={s.time}>
+            <Odometer value={hhmm(snap(shown()))} />
+          </div>
           <div class={s.delta}>{delta() <= 0 ? t().picker.nowMark : t().picker.later(duration(delta()))}</div>
         </div>
       </div>

@@ -1,0 +1,23 @@
+.odo {
+  display: inline-block;
+  font-variant-numeric: tabular-nums;
+}
+
+.digits {
+  display: inline-flex;
+  overflow: hidden;
+  vertical-align: bottom;
+}
+
+.ch {
+  display: inline-block;
+  white-space: pre;
+  animation: roll var(--duration) var(--ease-out);
+}
+
+@keyframes roll {
+  from {
+    transform: translateY(-55%);
+    opacity: 0;
+  }
+}

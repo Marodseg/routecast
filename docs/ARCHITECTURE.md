@@ -140,7 +140,7 @@ Todas funciones puras y deterministas; `thresholds` inyectado (valor por defecto
 
 - Framework: **Hono**. Un solo Worker. Rutas: `GET /api/warnings`, `GET /api/route`, `GET /api/health`.
 - **CORS** restringido al origen de GitHub Pages (y localhost en dev).
-- **Caché**: primero `Cache API` por centro de datos (no consume cuota de escrituras de KV); KV solo para datos compartidos de TTL largo (p. ej. catálogo de municipios). KV gratis permite pocas escrituras/día: no escribir por petición.
+- **Caché**: memoria del isolate + `Cache API` por centro de datos (ADR-0009; la Cache API no está garantizada en `*.workers.dev`). Sin KV en v1: su cuota gratuita de escrituras es mínima.
 - **Rate limiting**: binding de rate limiting de Workers por IP (best-effort, no antiabuso estricto) + límite de tamaño de entrada (bbox, nº de puntos).
 - **Presupuesto de CPU**: el plan gratuito da 10 ms de CPU por petición y 50 subrequests externas: el Worker **no** procesa geometría pesada ni hace muchas llamadas; reenvía y cachea.
 - **Secretos**: `AEMET_API_KEY`, `ORS_API_KEY` con `wrangler secret`. Nunca en `wrangler.toml`.

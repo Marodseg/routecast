@@ -2,6 +2,8 @@ import type { RiskLevelOrUnknown } from '@routecast/shared';
 import { For, Show } from 'solid-js';
 import { t } from '../../i18n';
 import { duration } from '../../lib/format';
+import { Icon } from '../Icon/Icon';
+import { Odometer } from '../Odometer/Odometer';
 import { RiskChip } from '../RiskChip/RiskChip';
 import { type ProfileSegment, RiskProfile } from '../RiskProfile/RiskProfile';
 import s from './RouteCompare.module.css';
@@ -18,6 +20,8 @@ export interface CompareRoute {
   profile: ProfileSegment[];
   /** «17:24 · Racha cruzada de 62 km/h (racha 82)»; vacío si no hay riesgo. */
   worstText?: string;
+  /** Avisos oficiales en la ruta a la hora de paso. */
+  alerts?: number;
 }
 
 export interface RouteCompareProps {
@@ -59,16 +63,22 @@ export function RouteCompare(props: RouteCompareProps) {
                   <RiskChip level={r.worst} short noIcon />
                 </span>
                 <span class={s.num}>
-                  {r.kmHigh}
+                  <Odometer value={String(r.kmHigh)} />
                   <small> {t().units.km}</small>
                   <span class="visually-hidden">{t().compare.kmHigh(r.kmHigh)}</span>
                 </span>
                 <span class={s.sub}>
-                  {r.via} · {r.distanceKm} {t().units.km} · {t().compare.arrival(r.arrival)}
+                  {r.via} · {r.distanceKm} {t().units.km} · {t().compare.arrival('')}
+                  <Odometer value={r.arrival} />
                 </span>
                 <span class={s.profile}>
                   <RiskProfile segments={r.profile} totalKm={r.distanceKm} routeId={r.id} variant="mini" />
                 </span>
+                <Show when={r.alerts}>
+                  <span class={s.alerts}>
+                    <Icon name="warning" size={14} /> {t().alerts.onRoute(r.alerts ?? 0)}
+                  </span>
+                </Show>
                 <span class={s.worst}>
                   <Show when={r.worstText} fallback={t().compare.noRisk}>
                     {r.worstText}

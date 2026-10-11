@@ -82,13 +82,36 @@ export function RouteMap(props: RouteMapProps) {
   const [failed, setFailed] = createSignal(false);
   let onStyleLoad: (() => void) | undefined;
 
+  /** Fracción [0, 1] de la ruta seleccionada ya «dibujada» (animación de trazado al llegar resultados). */
+  const [reveal, setReveal] = createSignal(1);
+  let revealRaf = 0;
+  onCleanup(() => cancelAnimationFrame(revealRaf));
+  function traceIn() {
+    cancelAnimationFrame(revealRaf);
+    if (reducedMotion()) {
+      setReveal(1);
+      return;
+    }
+    const start = performance.now();
+    const DURATION = 700;
+    const step = (now: number) => {
+      const k = Math.min(1, (now - start) / DURATION);
+      setReveal(1 - (1 - k) ** 3); // salida suave, sin rebote
+      if (k < 1) revealRaf = requestAnimationFrame(step);
+    };
+    setReveal(0);
+    revealRaf = requestAnimationFrame(step);
+  }
+
   const data = () => {
     const segs: Feature[] = [];
     const badges: Feature[] = [];
     for (const r of props.routes) {
       const sel = r.letter === props.selected;
+      const cutM = sel ? reveal() * (r.cumM.at(-1) ?? 0) : Number.POSITIVE_INFINITY;
       for (const sg of r.segments) {
-        const pts = sliceLine(r.geometry, r.cumM, sg.fromKm * 1000, sg.toKm * 1000);
+        if (sg.fromKm * 1000 >= cutM) break;
+        const pts = sliceLine(r.geometry, r.cumM, sg.fromKm * 1000, Math.min(sg.toKm * 1000, cutM));
         if (pts.length >= 2) segs.push(line(pts, { route: r.letter, level: levelNum(sg.level), sel }));
       }
       const total = r.cumM.at(-1) ?? 0;
@@ -307,9 +330,17 @@ export function RouteMap(props: RouteMapProps) {
 
   // Nuevas rutas → encuadre general; nueva selección → encuadre suave de esa ruta.
   createEffect(
-    on([() => props.routes.map((r) => r.letter + r.geometry.length).join(), ready], () => ready() && fit(null), {
-      defer: true,
-    }),
+    on(
+      [() => props.routes.map((r) => r.letter + r.geometry.length).join(), ready],
+      () => {
+        if (!ready()) return;
+        fit(null);
+        traceIn();
+      },
+      {
+        defer: true,
+      },
+    ),
   );
   createEffect(
     on(

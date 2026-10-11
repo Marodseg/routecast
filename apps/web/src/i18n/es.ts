@@ -82,6 +82,22 @@ export const es = {
     levels: { yellow: 'Amarillo', orange: 'Naranja', red: 'Rojo' },
     source: (s: string) => `Fuente: ${s}`,
     partial: 'Algunos avisos no se han podido cargar.',
+    unavailable: 'Los avisos oficiales no están disponibles ahora mismo: consulta aemet.es antes de salir.',
+    loading: 'Consultando avisos oficiales…',
+    stretch: (from: number, to: number, time: string) => `km ${from}–${to} · pasas hacia las ${time}`,
+    onRoute: (n: number) => (n === 1 ? '1 aviso' : `${n} avisos`),
+    kinds: {
+      wind: 'Viento',
+      rain: 'Lluvias',
+      snow: 'Nevadas',
+      storm: 'Tormentas',
+      fog: 'Nieblas',
+      heat: 'Temperaturas máximas',
+      cold: 'Temperaturas mínimas',
+      coastal: 'Fenómenos costeros',
+      dust: 'Polvo en suspensión',
+      other: 'Otros fenómenos',
+    },
   },
   empty: {
     startTitle: '¿Adónde vas?',
@@ -139,7 +155,7 @@ export const es = {
   },
   confidence: { low: 'Previsión a más de 48 h: confianza baja.' },
   attribution:
-    '© OpenStreetMap contributors · OpenFreeMap · Weather data by Open-Meteo.com (CC-BY 4.0) · Routing by Valhalla (FOSSGIS) / OSRM / OpenRouteService · Avisos: AEMET / Meteoalarm (EUMETNET)',
+    '© OpenStreetMap contributors · OpenFreeMap · Weather data by Open-Meteo.com (CC-BY 4.0) · Routing by Valhalla (FOSSGIS) / OSRM / OpenRouteService · Avisos: Fuente: AEMET · Meteoalarm (EUMETNET)',
 };
 
 export type Dict = typeof es;

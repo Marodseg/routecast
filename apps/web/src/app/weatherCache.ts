@@ -5,13 +5,18 @@ export const WEATHER_TTL_MS = 30 * 60_000;
 
 const DB = 'routecast';
 const STORE = 'weather';
+const LAST = 'last';
 
 function openDb(): Promise<IDBDatabase | null> {
   return new Promise((resolve) => {
     try {
-      const req = globalThis.indexedDB?.open(DB, 1);
+      const req = globalThis.indexedDB?.open(DB, 2);
       if (!req) return resolve(null);
-      req.onupgradeneeded = () => req.result.createObjectStore(STORE);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE);
+        if (!db.objectStoreNames.contains(LAST)) db.createObjectStore(LAST);
+      };
       req.onsuccess = () => resolve(req.result);
       req.onerror = () => resolve(null);
     } catch {
@@ -25,6 +30,7 @@ function openDb(): Promise<IDBDatabase | null> {
  * entonces solo memoria. Nunca lanza.
  */
 export class WeatherCache {
+  #stale = false;
   readonly #mem = new Map<string, HourlyWeather>();
   #db: Promise<IDBDatabase | null> | null = null;
   constructor(
@@ -38,7 +44,13 @@ export class WeatherCache {
     return this.#db;
   }
 
-  #fresh = (h: HourlyWeather | undefined): h is HourlyWeather => !!h && this.now() - h.fetchedAtMs < this.ttlMs;
+  #fresh = (h: HourlyWeather | undefined): h is HourlyWeather =>
+    !!h && (this.#stale || this.now() - h.fetchedAtMs < this.ttlMs);
+
+  /** Sin conexión, mejor una previsión de hace unas horas (avisando) que ninguna. */
+  allowStale(on: boolean): void {
+    this.#stale = on;
+  }
 
   async getMany(keys: readonly string[]): Promise<Map<string, HourlyWeather>> {
     const out = new Map<string, HourlyWeather>();
@@ -87,4 +99,35 @@ export class WeatherCache {
       // Cuota o modo privado: seguimos con memoria.
     }
   }
+}
+
+/** Última consulta con resultados, para abrirla sin conexión (SPEC F15). */
+export interface LastQuery<R> {
+  key: string;
+  routes: R[];
+  savedAtMs: number;
+}
+
+export async function saveLast<R>(q: LastQuery<R>): Promise<void> {
+  const db = await openDb();
+  if (!db) return;
+  try {
+    db.transaction(LAST, 'readwrite').objectStore(LAST).put(q, 'last');
+  } catch {
+    // Sin persistencia: no pasa nada.
+  }
+}
+
+export async function loadLast<R>(): Promise<LastQuery<R> | null> {
+  const db = await openDb();
+  if (!db) return null;
+  return new Promise((resolve) => {
+    try {
+      const r = db.transaction(LAST, 'readonly').objectStore(LAST).get('last');
+      r.onsuccess = () => resolve((r.result as LastQuery<R> | undefined) ?? null);
+      r.onerror = () => resolve(null);
+    } catch {
+      resolve(null);
+    }
+  });
 }

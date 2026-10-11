@@ -15,5 +15,6 @@
   },
   "devDependencies": {
     "msw": "3.0.3"
-  }
+  },
+  "sideEffects": false
 }
