@@ -1,5 +1,5 @@
 import type { RiskLevelOrUnknown } from '@routecast/shared';
-import { createMemo, createSignal, createUniqueId, For, onCleanup, onMount, Show } from 'solid-js';
+import { createEffect, createMemo, createSignal, createUniqueId, For, onCleanup, onMount, Show } from 'solid-js';
 import { t } from '../../i18n';
 import s from './RiskProfile.module.css';
 
@@ -94,6 +94,15 @@ export function RiskProfile(props: RiskProfileProps) {
     const c = cursor();
     return c === null ? undefined : t().profile.at(Math.round(c), levelText(levelAtKm(c)));
   };
+
+  // Etiqueta del cursor centrada sobre él pero sin salirse del gráfico (el panel la recortaría en los extremos).
+  let tip: HTMLOutputElement | undefined;
+  const [tipW, setTipW] = createSignal(0);
+  createEffect(() => {
+    cursorText();
+    setTipW(tip?.offsetWidth ?? 0);
+  });
+  const tipLeft = () => Math.max(0, Math.min(width() - tipW(), x(cursor() ?? 0) - tipW() / 2));
 
   const fromPointer = (e: PointerEvent) => {
     const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
@@ -217,7 +226,7 @@ export function RiskProfile(props: RiskProfileProps) {
         </div>
         <Show when={cursorText()}>
           {(text) => (
-            <output class={s.tip} style={{ left: `${((cursor() ?? 0) / Math.max(1, props.totalKm)) * 100}%` }}>
+            <output ref={tip} class={s.tip} style={{ left: `${tipLeft()}px` }}>
               {text()}
             </output>
           )}
