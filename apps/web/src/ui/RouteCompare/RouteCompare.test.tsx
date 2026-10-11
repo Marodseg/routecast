@@ -26,10 +26,26 @@ const routes: CompareRoute[] = [
     worst: 3,
     kmHigh: 58,
     profile: [{ fromKm: 0, toKm: 128, level: 3 }],
+    cause: { factor: 'crosswind', label: 'Viento lateral' },
   },
 ];
 
 describe('RouteCompare', () => {
+  it('dice qué es el peligro junto al nivel («Severo · Viento lateral»)', () => {
+    setLang('es');
+    render(() => <RouteCompare routes={routes} selected="A" />);
+    const [b, a] = screen.getAllByRole('button');
+    expect(a?.textContent).toMatch(/Severo.*Viento lateral/);
+    expect(b?.textContent).not.toContain('Viento lateral');
+  });
+
+  it('una ruta larga con cientos de tramos no desborda la tira (se unen los tramos iguales)', () => {
+    setLang('es');
+    const profile = Array.from({ length: 400 }, (_, i) => ({ fromKm: i * 5, toKm: (i + 1) * 5, level: 0 as const }));
+    const { container } = render(() => <RouteCompare routes={[{ ...routes[0], profile } as CompareRoute]} />);
+    expect(container.querySelectorAll('[role=img] > i')).toHaveLength(1);
+  });
+
   it('muestra las tres lecturas por ruta en el orden recibido', () => {
     setLang('es');
     render(() => <RouteCompare routes={routes} selected="A" />);

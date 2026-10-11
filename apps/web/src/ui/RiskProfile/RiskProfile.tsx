@@ -21,11 +21,26 @@ export interface RiskProfileProps {
 }
 
 const H = 64;
+/** Espacio mínimo por etiqueta del eje (≈ «2000» en mono pequeño + aire). */
+const AXIS_LABEL_PX = 48;
+const AXIS_STEPS_KM = [10, 25, 50, 100, 200, 250, 500, 1000, 2000];
+
+/** Une tramos contiguos del mismo nivel: una ruta larga trae cientos y, sin unir, la tira mini desborda. */
+export function mergeSegments(segments: readonly ProfileSegment[]): ProfileSegment[] {
+  const out: ProfileSegment[] = [];
+  for (const sg of segments) {
+    const last = out[out.length - 1];
+    if (last && last.level === sg.level && sg.fromKm <= last.toKm + 1e-6) last.toKm = Math.max(last.toKm, sg.toKm);
+    else out.push({ ...sg });
+  }
+  return out;
+}
 const levelHeight = (l: RiskLevelOrUnknown) => (l === 'unknown' ? 0.35 : ([0.12, 0.42, 0.72, 1][l] ?? 0));
 
 /** Perfil de riesgo a lo largo del kilómetro, como un perfil de altitud (DESIGN §4). */
 export function RiskProfile(props: RiskProfileProps) {
   const uid = createUniqueId();
+  const segments = createMemo(() => mergeSegments(props.segments));
   const levelAtKm = (km: number) => props.segments.find((sg) => km >= sg.fromKm && km <= sg.toKm)?.level ?? 'unknown';
   const levelText = (l: RiskLevelOrUnknown) => (l === 'unknown' ? t().risk.unknown : (t().risk.levels[l] ?? ''));
 
@@ -66,9 +81,12 @@ export function RiskProfile(props: RiskProfileProps) {
   const x = (km: number) => (km / Math.max(1, props.totalKm)) * width();
 
   const axis = createMemo(() => {
-    const stepKm = props.totalKm > 600 ? 100 : props.totalKm > 250 ? 50 : props.totalKm > 80 ? 25 : 10;
+    // El paso «redondo» más corto que cabe en el ancho real; nada pegado a la unidad del final.
+    const fit = Math.max(1, Math.floor(width() / AXIS_LABEL_PX));
+    const stepKm =
+      AXIS_STEPS_KM.find((st) => props.totalKm / st <= fit) ?? AXIS_STEPS_KM[AXIS_STEPS_KM.length - 1] ?? 1000;
     const out: number[] = [];
-    for (let k = 0; k <= props.totalKm; k += stepKm) out.push(k);
+    for (let k = 0; k <= props.totalKm; k += stepKm) if (x(k) <= width() - AXIS_LABEL_PX) out.push(k);
     return out;
   });
 
@@ -87,7 +105,7 @@ export function RiskProfile(props: RiskProfileProps) {
       when={props.variant === 'full'}
       fallback={
         <span class={s.mini} role="img" aria-label={`${t().profile.label(props.routeId)}. ${summary()}`}>
-          <For each={props.segments}>
+          <For each={segments()}>
             {(sg) => (
               <i class={`risk-fill-${sg.level}`} style={{ 'flex-grow': Math.max(0.001, sg.toKm - sg.fromKm) }} />
             )}
@@ -161,7 +179,7 @@ export function RiskProfile(props: RiskProfileProps) {
                 <rect width="5" height="1.6" class={s.pat} />
               </pattern>
             </defs>
-            <For each={props.segments}>
+            <For each={segments()}>
               {(sg) => {
                 const h = () => levelHeight(sg.level) * (H - 4);
                 const w = () => Math.max(0, x(sg.toKm) - x(sg.fromKm));

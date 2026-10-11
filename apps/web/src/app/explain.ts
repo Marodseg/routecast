@@ -22,6 +22,14 @@ export function explainFactor(p: EvaluatedPoint, t: Dict): string {
   return r.dominant ? byFactor[r.dominant]() : '';
 }
 
+/** Qué es el peligro de un punto, en pocas palabras («Poca visibilidad»), o null si no hay riesgo. */
+export function causeOf(p: EvaluatedPoint, t: Dict): { factor: Factor; label: string } | null {
+  const r = p.risk;
+  if (r.level === 'unknown' || r.level === 0 || !r.dominant) return null;
+  const label = r.dominant === 'storm' && r.hailRisk ? t.cause.hail : t.cause[r.dominant];
+  return { factor: r.dominant, label };
+}
+
 /** Nota de datos parciales («Sin datos de visibilidad en algún tramo.»). */
 export function partialNote(points: readonly EvaluatedPoint[], t: Dict): string | null {
   const missing = new Set<Factor>();

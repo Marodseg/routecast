@@ -1,7 +1,7 @@
 import type { Place } from '@routecast/shared';
 import { batch, createEffect, createMemo, createSignal, Match, on, onCleanup, onMount, Show, Switch } from 'solid-js';
 import s from './App.module.css';
-import { explainFactor, partialNote } from './app/explain';
+import { causeOf, explainFactor, partialNote } from './app/explain';
 import { loadGazetteer, mergePlaces, searchGazetteer } from './app/gazetteer';
 import { createServices, type Services } from './app/services';
 import { createAppStore } from './app/store';
@@ -18,6 +18,7 @@ import { DeparturePicker } from './ui/DeparturePicker/DeparturePicker';
 import { EmptyState, Skeleton, Toaster } from './ui/Feedback/Feedback';
 import { Icon } from './ui/Icon/Icon';
 import { Legend } from './ui/Legend/Legend';
+import { RiskChip } from './ui/RiskChip/RiskChip';
 import { RiskProfile } from './ui/RiskProfile/RiskProfile';
 import { RoadWind } from './ui/RoadWind/RoadWind';
 import { type CompareRoute, RouteCompare } from './ui/RouteCompare/RouteCompare';
@@ -123,6 +124,7 @@ export function App(props: { services?: Services }) {
     store.ranked().map(({ view, ev, alerts }) => {
       const worst = ev.risk.worstPoint === null ? undefined : ev.points[ev.risk.worstPoint];
       const level = ev.risk.worstLevel;
+      const cause = worst ? causeOf(worst, t()) : null;
       return {
         id: view.letter,
         name: view.route.name || t().route.unnamed,
@@ -131,12 +133,13 @@ export function App(props: { services?: Services }) {
         durationMin: Math.round(view.route.durationS / 60),
         arrival: localHHMM(store.departureMs() + view.route.durationS * 1000),
         worst: level,
+        ...(cause ? { cause } : {}),
         kmHigh: Math.round(ev.risk.kmAtLevel2Plus),
         profile: ev.risk.segments,
         alerts: alerts.length,
         ...(worst && level !== 'unknown' && level > 0
           ? {
-              worstText: `${t().explain.at(localHHMM(worst.sample.etaMs), Math.round(worst.sample.kmFromStart))} · ${explainFactor(worst, t())}`,
+              worstText: `${explainFactor(worst, t())} · ${t().explain.at(localHHMM(worst.sample.etaMs), Math.round(worst.sample.kmFromStart))}`,
             }
           : {}),
       };
@@ -324,6 +327,17 @@ export function App(props: { services?: Services }) {
               >
                 <div>
                   <span class="label">{t().route.worstPoint(store.selected() ?? '', localHHMM(p().sample.etaMs))}</span>
+                  <Show when={causeOf(p(), t())}>
+                    {(c) => (
+                      <p class={s.cause}>
+                        <RiskChip level={p().risk.level} short />
+                        <span>
+                          <Icon name={c().factor} size={16} />
+                          {c().label}
+                        </span>
+                      </p>
+                    )}
+                  </Show>
                   <p class={s.big}>{explainFactor(p(), t())}</p>
                   <p class={s.where}>
                     {t().explain.at(localHHMM(p().sample.etaMs), Math.round(p().sample.kmFromStart))}

@@ -23,6 +23,17 @@ export const es = {
     visibility: 'Visibilidad',
     storm: 'Tormenta',
   },
+  /** Qué es el peligro, en una o dos palabras (junto al nivel: «Alto · Poca visibilidad»). */
+  cause: {
+    rain: 'Lluvia fuerte',
+    crosswind: 'Viento lateral',
+    gust: 'Rachas de viento',
+    snow: 'Nieve',
+    ice: 'Hielo',
+    visibility: 'Poca visibilidad',
+    storm: 'Tormenta',
+    hail: 'Tormenta (posible granizo)',
+  },
   picker: {
     label: 'Hora de salida',
     now: 'Ahora',
@@ -45,8 +56,8 @@ export const es = {
     caption: 'Rutas ordenadas por riesgo',
     route: 'Ruta',
     time: 'Tiempo',
-    worst: 'Peor',
-    high: 'Alto',
+    worst: 'Riesgo',
+    high: 'Km riesgo',
     arrival: (t: string) => `llegada ${t}`,
     noRisk: 'Sin tramos con riesgo a esta hora',
     kmHigh: (km: number) => `${km} km en riesgo alto o severo`,

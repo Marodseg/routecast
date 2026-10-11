@@ -1,4 +1,4 @@
-import type { RiskLevelOrUnknown } from '@routecast/shared';
+import type { Factor, RiskLevelOrUnknown } from '@routecast/shared';
 import { For, Show } from 'solid-js';
 import { t } from '../../i18n';
 import { duration } from '../../lib/format';
@@ -16,6 +16,8 @@ export interface CompareRoute {
   durationMin: number;
   arrival: string;
   worst: RiskLevelOrUnknown;
+  /** Qué es el peligro del peor punto («Poca visibilidad»): el nivel solo no dice nada. */
+  cause?: { factor: Factor; label: string };
   kmHigh: number;
   profile: ProfileSegment[];
   /** «17:24 · Racha cruzada de 62 km/h (racha 82)»; vacío si no hay riesgo. */
@@ -61,6 +63,14 @@ export function RouteCompare(props: RouteCompareProps) {
                 <span class={s.num}>{duration(r.durationMin)}</span>
                 <span class={s.risk}>
                   <RiskChip level={r.worst} short noIcon />
+                  <Show when={r.cause}>
+                    {(c) => (
+                      <span class={s.cause}>
+                        <Icon name={c().factor} size={13} />
+                        {c().label}
+                      </span>
+                    )}
+                  </Show>
                 </span>
                 <span class={s.num}>
                   <Odometer value={String(r.kmHigh)} />

@@ -1,13 +1,40 @@
 import { fireEvent, render, screen } from '@solidjs/testing-library';
 import { describe, expect, it } from 'vitest';
 import { setLang } from '../../i18n';
-import { RiskProfile } from './RiskProfile';
+import { mergeSegments, RiskProfile } from './RiskProfile';
 
 const segments = [
   { fromKm: 0, toKm: 20, level: 0 as const },
   { fromKm: 20, toKm: 60, level: 3 as const },
   { fromKm: 60, toKm: 100, level: 1 as const },
 ];
+
+describe('mergeSegments', () => {
+  it('une tramos contiguos del mismo nivel y respeta los cambios', () => {
+    expect(
+      mergeSegments([
+        { fromKm: 0, toKm: 5, level: 0 },
+        { fromKm: 5, toKm: 10, level: 0 },
+        { fromKm: 10, toKm: 15, level: 2 },
+        { fromKm: 15, toKm: 20, level: 'unknown' },
+        { fromKm: 20, toKm: 25, level: 'unknown' },
+      ]),
+    ).toEqual([
+      { fromKm: 0, toKm: 10, level: 0 },
+      { fromKm: 10, toKm: 15, level: 2 },
+      { fromKm: 15, toKm: 25, level: 'unknown' },
+    ]);
+  });
+
+  it('no modifica la entrada', () => {
+    const input = [
+      { fromKm: 0, toKm: 5, level: 1 as const },
+      { fromKm: 5, toKm: 10, level: 1 as const },
+    ];
+    mergeSegments(input);
+    expect(input[0]?.toKm).toBe(5);
+  });
+});
 
 describe('RiskProfile', () => {
   it('sin cursor no inventa un valor y resume los tramos de riesgo', () => {

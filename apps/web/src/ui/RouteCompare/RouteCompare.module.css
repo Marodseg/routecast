@@ -1,5 +1,5 @@
 .compare {
-  --cols: minmax(0, 1fr) 4.4rem 6.4rem 3.4rem;
+  --cols: minmax(0, 1fr) 4.4rem 8.5rem 4.6rem;
   container-type: inline-size;
 }
 
@@ -90,7 +90,23 @@
 }
 .risk {
   display: flex;
-  justify-content: flex-end;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+}
+
+/* Qué es el peligro, pegado al nivel: «Alto» solo no se entiende. */
+.cause {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 4px;
+  font: 600 var(--text-sm) / 1.15 var(--font-display);
+  text-align: right;
+}
+
+.cause > svg {
+  flex: none;
+  margin-top: 1px;
 }
 
 .sub {
@@ -136,7 +152,11 @@
   }
 
   .risk {
-    justify-content: flex-start;
+    align-items: flex-start;
+  }
+
+  .cause {
+    text-align: left;
   }
 
   .name {

@@ -1,5 +1,6 @@
 /** Datos FICTICIOS para la galería: Málaga → Granada, tres rutas. Sin red. */
 import type { LatLng, Place, RiskLevel } from '@routecast/shared';
+import { t } from '../i18n';
 import { duration, hhmm } from '../lib/format';
 import type { DialBand } from '../ui/DeparturePicker/DeparturePicker';
 import type { ProfileSegment } from '../ui/RiskProfile/RiskProfile';
@@ -153,7 +154,12 @@ export function compareRoutes(min: number): CompareRoute[] {
         worst,
         kmHigh,
         profile: prof,
-        ...(worst > 0 ? { worstText: `${hhmm(min + r.worstAtMin)} · ${FACTOR_TEXT[r.factor](worst)}` } : {}),
+        ...(worst > 0
+          ? {
+              worstText: `${FACTOR_TEXT[r.factor](worst)} · ${hhmm(min + r.worstAtMin)}`,
+              cause: { factor: r.factor, label: t().cause[r.factor] },
+            }
+          : {}),
       } satisfies CompareRoute;
     })
     .sort((a, b) => (a.worst as number) - (b.worst as number) || a.kmHigh - b.kmHigh || a.durationMin - b.durationMin);
