@@ -168,6 +168,7 @@ export function CommandSearch(props: CommandSearchProps) {
           id={`${uid}-input`}
           class={s.input}
           type="text"
+          size={1}
           role="combobox"
           autocomplete="off"
           spellcheck={false}

@@ -1,8 +1,24 @@
 [
   {
-    "name": "web: JS de la app (gzip, sin la galería)",
-    "path": ["apps/web/dist/assets/*.js", "!apps/web/dist/assets/gallery-*.js"],
-    "limit": "350 KB",
+    "name": "web: JS inicial (gzip; sin mapa ni galería)",
+    "path": [
+      "apps/web/dist/assets/*.js",
+      "!apps/web/dist/assets/gallery-*.js",
+      "!apps/web/dist/assets/maplibre-gl-*.js"
+    ],
+    "limit": "120 KB",
+    "gzip": true
+  },
+  {
+    "name": "web: mapa diferido (MapLibre + worker, gzip)",
+    "path": "apps/web/dist/assets/maplibre-gl-*.js",
+    "limit": "300 KB",
+    "gzip": true
+  },
+  {
+    "name": "web: worker de MapLibre (gzip)",
+    "path": "apps/web/dist/assets/maplibre-gl-worker-*.mjs",
+    "limit": "160 KB",
     "gzip": true
   },
   {

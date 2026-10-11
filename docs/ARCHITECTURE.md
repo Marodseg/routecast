@@ -111,7 +111,7 @@ Todos devuelven `Result` (sin excepciones para errores esperados). Cada adaptado
 User-Agent/atribución según `PROVIDERS.md`, y tests con fixtures grabadas.
 
 ### 4.1 Cadena de fallback de rutas
-`OSRM (routing.openstreetmap.de) → OSRM (router.project-osrm.org) → Worker /api/route (ORS)`.
+`Valhalla (valhalla1.openstreetmap.de) → OSRM (routing.openstreetmap.de) → OSRM (router.project-osrm.org) → Worker /api/route (ORS)` (ADR-0008: Valhalla da alternativas reales; los demos OSRM a menudo no).
 Circuit breaker simple por proveedor (abre tras N fallos, semiabierto a los 60 s). Throttle ≤ 1 req/s hacia demos públicos.
 El orden y los límites son **configuración**, no código.
 

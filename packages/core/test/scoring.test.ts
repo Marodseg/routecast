@@ -187,6 +187,7 @@ describe('scorePoint: combinación (SPEC §6.3)', () => {
     expect(p.factors.rain).toBe(1);
     expect(p.factors.crosswind).toBe(3);
     expect(p.values.crossGustKmH).toBe(85);
+    expect(p.values.windFromDeg).toBe(90);
     expect(p.level).toBe(3);
     expect(p.dominant).toBe('crosswind');
   });

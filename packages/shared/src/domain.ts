@@ -12,6 +12,8 @@ export interface Route {
   /** Segundos desde el origen hasta geometry[i]. */
   cumDurationS: number[];
   provider: string;
+  /** Vías principales («A-45 · A-92») si el proveedor las da. */
+  name?: string;
 }
 
 export interface SamplePoint {

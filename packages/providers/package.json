@@ -12,5 +12,8 @@
   "dependencies": {
     "@routecast/shared": "workspace:*",
     "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "msw": "3.0.3"
   }
 }

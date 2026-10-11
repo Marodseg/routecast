@@ -14,6 +14,7 @@ export {
   cumulativeDistancesM,
   haversineM,
   pointAtDistance,
+  sliceLine,
   smoothedHeadingAt,
 } from './geo';
 export { DEFAULT_RESAMPLE, type ResampleOptions, type RouteSample, resample } from './resample';

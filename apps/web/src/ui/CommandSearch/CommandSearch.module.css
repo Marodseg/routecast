@@ -1,5 +1,7 @@
 .search {
   position: relative;
+  min-width: 0;
+  grid-column: 1;
   display: grid;
   gap: var(--space-1);
 }

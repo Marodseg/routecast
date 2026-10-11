@@ -29,7 +29,7 @@ export function EmptyState(props: EmptyStateProps) {
   return (
     <section class={`${s.empty} plate`} data-tone={props.tone ?? 'neutral'}>
       <Icon name={props.icon} size={28} class={s.emptyIcon} />
-      <h3 class={s.emptyTitle}>{props.title}</h3>
+      <h2 class={s.emptyTitle}>{props.title}</h2>
       <p class={s.emptyBody}>{props.body}</p>
       <Show when={props.action}>
         {(a) => (

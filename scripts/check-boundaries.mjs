@@ -21,6 +21,12 @@ const cases = [
   { pkg: 'providers', code: "import x from '@routecast/core';", rule: 'noRestrictedImports', blocked: true },
   { pkg: 'providers', code: "import x from '../../core/src/index';", rule: 'noRestrictedImports', blocked: true },
   { pkg: 'providers', code: "import x from '@routecast/shared';", rule: 'noRestrictedImports', blocked: false },
+  {
+    pkg: 'providers',
+    code: "import x from '@routecast/shared/providers';",
+    rule: 'noRestrictedImports',
+    blocked: false,
+  },
 ];
 
 const BIOME = fileURLToPath(import.meta.resolve('@biomejs/biome/bin/biome'));

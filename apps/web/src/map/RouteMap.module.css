@@ -1,0 +1,29 @@
+.wrap {
+  position: absolute;
+  inset: 0;
+  background: var(--land);
+}
+
+/* MapLibre fuerza position: relative en su contenedor: se dimensiona con width/height. */
+.map {
+  width: 100%;
+  height: 100%;
+}
+
+.map :global(.maplibregl-ctrl-attrib) {
+  font: 400 10px / 1.4 var(--font-mono);
+  background: color-mix(in oklch, var(--surface) 85%, transparent);
+  color: var(--ink-muted);
+}
+
+.map :global(.maplibregl-ctrl-attrib a) {
+  color: inherit;
+}
+
+.fallback {
+  position: absolute;
+  inset: auto 0 50% 0;
+  text-align: center;
+  color: var(--ink-subtle);
+  font-size: var(--text-sm);
+}

@@ -115,6 +115,13 @@ export function scorePoint(hours: readonly HourSample[], headingDeg: number, th:
     }
     values.precipitationMmH = maxNullable(values.precipitationMmH, h.precipitationMmH);
     values.gustsKmH = maxNullable(values.gustsKmH, h.gustsKmH);
+    if (
+      s.crossGustKmH !== null &&
+      (values.crossGustKmH === undefined || values.crossGustKmH === null || s.crossGustKmH > values.crossGustKmH)
+    ) {
+      // Dirección de la hora con mayor racha cruzada, para dibujar el viento respecto a la carretera.
+      values.windFromDeg = h.windFromDeg;
+    }
     values.crossGustKmH = maxNullable(values.crossGustKmH, s.crossGustKmH);
     values.snowfallCmH = maxNullable(values.snowfallCmH, h.snowfallCmH);
     values.visibilityM = minNullable(values.visibilityM, h.visibilityM);
