@@ -46,6 +46,7 @@ async function aemetTar(area) {
       });
       if (meta.status === 429) throw new Error('429');
       const j = await meta.json();
+      if (j.estado === 429) throw new Error('429 (estado en el cuerpo)');
       if (!j.datos) throw new Error(`sin datos: ${j.descripcion}`);
       await wait(1600);
       const tar = await fetch(j.datos, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(30_000) });
@@ -53,7 +54,7 @@ async function aemetTar(area) {
       return Buffer.from(await tar.arrayBuffer());
     } catch (e) {
       console.warn(`  área ${area}: ${e.message}; reintento`);
-      await wait(6000 * (attempt + 1));
+      await wait(e.message.startsWith('429') ? 60_000 : 6000 * (attempt + 1));
     }
   }
   throw new Error(`área ${area}: sin respuesta`);
@@ -123,11 +124,13 @@ console.warn(`zonas: ${out.length}`);
 // Fixtures complementarios
 const atom = await fetch('https://feeds.meteoalarm.org/feeds/meteoalarm-legacy-atom-spain', {
   headers: { 'User-Agent': UA },
+  signal: AbortSignal.timeout(20_000),
 });
 if (atom.ok) writeFileSync(new URL('meteoalarm-spain.atom', FIXTURES), await atom.text());
 await wait(1600);
 const ors = await fetch('https://api.openrouteservice.org/v2/directions/driving-car/geojson', {
   method: 'POST',
+  signal: AbortSignal.timeout(20_000),
   headers: {
     Authorization: vars.ORS_API_KEY,
     'Content-Type': 'application/json',

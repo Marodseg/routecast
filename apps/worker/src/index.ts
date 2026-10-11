@@ -219,7 +219,7 @@ async function route(c: Context<AppEnv>) {
   if (used >= ORS_DAILY_CAP) return c.json({ error: 'unavailable' }, 503);
   await cache.set(dayKey, used + 1, 86_400);
 
-  const res = await new OrsRouting({ apiKey: key }).getRoutes(from, to, {
+  const res = await new OrsRouting({ apiKey: key, userAgent: UA }).getRoutes(from, to, {
     alternatives: alt,
     signal: AbortSignal.timeout(15_000),
   });

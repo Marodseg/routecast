@@ -157,5 +157,5 @@ export const en: Dict = {
   },
   confidence: { low: 'Forecast beyond 48 h: low confidence.' },
   attribution:
-    '© OpenStreetMap contributors · OpenFreeMap · Weather data by Open-Meteo.com (CC-BY 4.0) · Routing by Valhalla (FOSSGIS) / OSRM / OpenRouteService · Warnings: AEMET / Meteoalarm (EUMETNET)',
+    '© OpenStreetMap contributors · OpenFreeMap · Weather data by Open-Meteo.com (CC-BY 4.0) · Routing by Valhalla (FOSSGIS) / OSRM / OpenRouteService · Warnings: Source: AEMET · Meteoalarm (EUMETNET)',
 };

@@ -41,6 +41,7 @@ export interface OrsOptions {
   baseUrl?: string;
   timeoutMs?: number;
   fetchImpl?: typeof fetch;
+  userAgent?: string;
 }
 
 /** OpenRouteService (clave secreta): solo dentro del Worker, como último recurso de rutas (ARCHITECTURE §4.1). */
@@ -58,13 +59,9 @@ export class OrsRouting implements RoutingProvider {
     opts: { alternatives: number; signal: AbortSignal },
   ): Promise<Result<Route[]>> {
     const first = await this.#request(from, to, opts);
-    // ORS limita las alternativas por distancia (error 2004): en ese caso, al menos una ruta.
-    if (
-      !first.ok &&
-      first.error.kind === 'bad_response' &&
-      first.error.detail === 'ors:2004' &&
-      opts.alternatives > 0
-    ) {
+    // ORS documenta un tope de distancia para las alternativas (100 km, aunque hoy no lo aplica de forma estricta):
+    // ante un rechazo de la petición (4xx), al menos una ruta.
+    if (!first.ok && first.error.kind === 'bad_response' && opts.alternatives > 0) {
       return this.#request(from, to, { ...opts, alternatives: 0 });
     }
     return first;
@@ -95,6 +92,7 @@ export class OrsRouting implements RoutingProvider {
           method: 'POST',
           headers: {
             Authorization: this.#o.apiKey,
+            ...(this.#o.userAgent ? { 'User-Agent': this.#o.userAgent } : {}),
             'Content-Type': 'application/json',
             Accept: 'application/geo+json',
           },
