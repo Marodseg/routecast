@@ -1,6 +1,6 @@
 # PROVIDERS — límites, términos y notas
 
-Última verificación: **2026-10-10** (búsqueda web). Estos datos cambian. Antes de añadir o modificar una llamada externa,
+Última verificación: **2026-10-11** (búsqueda web). Estos datos cambian. Antes de añadir o modificar una llamada externa,
 usa el subagente `provider-auditor` y actualiza este archivo con fecha y fuente. Lo marcado **[VERIFICAR]** no está confirmado.
 
 Contexto de uso: proyecto personal/portfolio **sin monetización**. Si eso cambia, casi todo lo gratuito deja de valer (ver ADR-0004).
@@ -9,7 +9,7 @@ Contexto de uso: proyecto personal/portfolio **sin monetización**. Si eso cambi
 
 | Servicio | Uso | ¿Clave? | Límite gratuito | Condiciones clave |
 |---|---|---|---|---|
-| Open-Meteo | Previsión horaria | No | 600/min, 5.000/h, 10.000/día (por IP) | **No comercial**, atribución CC-BY; CORS abierto |
+| Open-Meteo | Previsión horaria | No | 600/min, 5.000/h, 10.000/día (por IP); 300.000/mes publicado pero sin aplicar (Pricing, 2026-10-11) | **No comercial**, atribución CC-BY; CORS abierto |
 | OSRM demo | Rutas + alternativas | No | ~1 req/s, sin SLA | No comercial, User-Agent válido, atribución OSRM/OSM (ODbL) |
 | Valhalla demo (FOSSGIS) | Rutas (primario: alternativas reales) | No | Uso justo; ~1 req/s por IP y 100 req/s globales **[NO CONFIRMADO, fuente secundaria]** | Uso razonable no comercial; sin SLA; sin cabecera obligatoria conocida |
 | OpenRouteService | Rutas (fallback vía Worker) | Sí | Directions 2.000/día, 40/min | No comercial; clave solo en Worker |
@@ -41,9 +41,10 @@ Contexto de uso: proyecto personal/portfolio **sin monetización**. Si eso cambi
   puertos; pendiente en el adaptador (fase 3) **[VERIFICAR coste en multi-ubicación]**.
 - No ofrece avisos. Sin nowcasting minuto a minuto en el plan gratuito.
 - **El límite es por IP**: llamar desde el navegador (IP de cada usuario). Desde Workers/servidores compartidos se han visto 429 por tráfico ajeno.
-- **Conteo de llamadas (revisado 2026-10-10, blog de Open-Meteo)**: cada petición pesa ≈ ubicaciones × max(días, 14)/14 × variables/10. Un lote de 50 celdas con 9 variables cuenta ≈ **45 llamadas** contra 600/min, 5.000/h y 10.000/día (≈ 13 lotes/min, ≈ 222 lotes/día). Los docs no fijan máximo de ubicaciones ni de longitud de URL; el proyecto usa lotes ≤ 20 celdas (≈ 18 llamadas cada uno), como mucho 3 a la vez y escalonados 250 ms, con caché por celda de 30 min. **Latencia (medida 2026-10-11)**: crece con las ubicaciones de cada petición (1 → 0,8 s, 10 → 3 s, 25 → 6 s, 50 → 14-35 s); por eso lotes pequeños en paralelo y timeout por lote de 10 s + 0,6 s por ubicación. La fórmula procede de un blog y sus comentarios **[VERIFICAR con el aviso «equivale a N llamadas» de la página de docs]**. Fuente: https://openmeteo.substack.com/p/weather-data-for-multiple-locations
+- **Conteo de llamadas (revisado 2026-10-11)**: los docs y los términos no publican la fórmula; solo el blog de Open-Meteo, que da peso ≈ ubicaciones × (días/14) × (variables/10). Un comentario del blog dice que 1-7 días no cambian el peso (suelo en 14 días), sin respuesta oficial **[VERIFICAR]**. Presupuesto en el peor caso (suelo de 14 días): un lote de 20 celdas con 9 variables ≈ **18 llamadas** contra 600/min, 5.000/h y 10.000/día (≈ 33 lotes/min, ≈ 555 lotes/día); una consulta de 3 rutas largas (≈ 100 celdas únicas) ≈ 90 llamadas. Sin tope de concurrencia en los términos (los límites son de volumen). El blog habla de hasta 1.000 ubicaciones por petición (no figura en /docs); la longitud de URL no está documentada (un lote de 20 ≈ 500 caracteres). El proyecto usa lotes ≤ 20 celdas, como mucho 3 a la vez y escalonados 250 ms, con caché por celda de 30 min. **Latencia (medida 2026-10-11)**: crece con las ubicaciones de cada petición (1 → 0,8 s, 10 → 3 s, 25 → 6 s, 50 → 14-35 s en un momento de carga; minutos después, 20 celdas × 7 días ≈ 0,1-0,5 s); por eso lotes pequeños en paralelo y timeout por lote de 10 s + 0,6 s por ubicación. Un 429 se reintenta 2 veces respetando `Retry-After` con tope de 10 s; si pide más, se devuelve resultado parcial.
+- **Días pedidos (2026-10-11)**: la app pide `forecast_days=7` (por defecto de la API; máximo 16) para poder elegir hoy y los seis días siguientes. Con el suelo de 14 días, 7 días pesan igual que 3; en la lectura literal pesarían algo más que 3 y la mitad que 14 **[VERIFICAR]**. La respuesta es ≈ 2,2× mayor. Una serie cacheada que no llega a ese horizonte se vuelve a pedir. A más de ~2-3 días `best_match` tira de modelos globales (ICON 7,5 d, ECMWF 15 d) en vez de los europeos de alta resolución: la calidad cae, y la UI lo marca como orientativo a partir de 48 h. `visibility` y `cape` pueden venir `null` según el modelo (el adaptador lo tolera).
 - Atribución: enlazar a Open-Meteo (CC-BY 4.0). Plan comercial desde ~29 €/mes (no previsto).
-- Fuentes: https://open-meteo.com/en/terms · https://open-meteo.com/en/docs · https://github.com/open-meteo/open-meteo/discussions/853
+- Fuentes: https://open-meteo.com/en/terms · https://open-meteo.com/en/docs · https://open-meteo.com/en/pricing · https://openmeteo.substack.com/p/weather-data-for-multiple-locations · https://github.com/open-meteo/open-meteo/discussions/853
 
 ### Valhalla demo (FOSSGIS) — revisado 2026-10-10
 - Endpoint: `https://valhalla1.openstreetmap.de/route?json=<URL-encoded>` (GET; también acepta POST). Se usa GET para evitar el preflight CORS.
