@@ -116,15 +116,13 @@ export function smoothedHeadingAt(
   // muestrear rutas largas y densas (≈ 60.000 vértices), O(n²): bloqueaba el navegador.
   const angles: number[] = [];
   const weights: number[] = [];
-  for (let i = Math.max(0, upperBound(cum, d - windowM) - 1); i < n - 1 && (cum[i] ?? 0) < d + windowM; i++) {
-    const a = geometry[i];
-    const b = geometry[i + 1];
-    const s0 = cum[i] ?? 0;
-    const s1 = cum[i + 1] ?? 0;
-    if (!a || !b || s1 - s0 <= 0) continue;
+  for (let i = Math.max(0, upperBound(cum, d - windowM) - 1); i < n - 1 && (cum[i] as number) < d + windowM; i++) {
+    const s0 = cum[i] as number;
+    const s1 = cum[i + 1] as number;
+    if (s1 - s0 <= 0) continue;
     const overlap = Math.min(s1, d + windowM) - Math.max(s0, d - windowM);
     if (overlap > 0) {
-      angles.push(bearingDeg(a, b));
+      angles.push(bearingDeg(geometry[i] as LatLng, geometry[i + 1] as LatLng));
       weights.push(overlap);
     }
   }
@@ -134,9 +132,9 @@ export function smoothedHeadingAt(
   const k = Math.min(n - 2, Math.max(0, upperBound(cum, d) - 1));
   for (let off = 0; off < n; off++) {
     for (const i of off ? [k - off, k + off] : [k]) {
-      const a = geometry[i];
-      const b = geometry[i + 1];
-      if (a && b && (cum[i + 1] ?? 0) - (cum[i] ?? 0) > 0) return bearingDeg(a, b);
+      if (i < 0 || i > n - 2) continue;
+      if ((cum[i + 1] as number) - (cum[i] as number) > 0)
+        return bearingDeg(geometry[i] as LatLng, geometry[i + 1] as LatLng);
     }
   }
   return 0;
@@ -148,7 +146,7 @@ function upperBound(cum: readonly number[], x: number): number {
   let hi = cum.length;
   while (lo < hi) {
     const mid = (lo + hi) >> 1;
-    if ((cum[mid] ?? 0) > x) hi = mid;
+    if ((cum[mid] as number) > x) hi = mid;
     else lo = mid + 1;
   }
   return lo;

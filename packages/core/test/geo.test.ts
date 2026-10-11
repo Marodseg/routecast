@@ -173,6 +173,27 @@ describe('casos límite de geometría', () => {
   });
 });
 
+describe('smoothedHeadingAt: búsqueda del segmento más cercano', () => {
+  it('ventana sobre segmentos de longitud 0 en medio: busca hacia ambos lados', () => {
+    const l = [ll(37, -4), ll(37.1, -4), ll(37.1, -4), ll(37.1, -4), ll(37.1, -3.9)];
+    const cum = cumulativeDistancesM(l);
+    // Justo en los vértices repetidos con ventana mínima: no hay solape con longitud > 0.
+    const h = smoothedHeadingAt(l, cum, cum[2] ?? 0, 0);
+    expect([0, 90].some((x) => angularDiffDeg(h, x) < 1)).toBe(true);
+  });
+
+  it('solo hay longitud al final: la encuentra buscando hacia delante', () => {
+    const l = [ll(37, -4), ll(37, -4), ll(37, -4), ll(37, -4), ll(37, -3.9)];
+    const cum = cumulativeDistancesM(l);
+    expect(smoothedHeadingAt(l, cum, 0, 0)).toBeCloseTo(90, 0);
+  });
+
+  it('todos los vértices iguales: 0', () => {
+    const l = [ll(37, -4), ll(37, -4), ll(37, -4)];
+    expect(smoothedHeadingAt(l, cumulativeDistancesM(l), 0, 100)).toBe(0);
+  });
+});
+
 describe('sliceLine', () => {
   const l = [ll(0, 0), ll(0, 1), ll(0, 2), ll(0, 3)];
   const cum = cumulativeDistancesM(l);

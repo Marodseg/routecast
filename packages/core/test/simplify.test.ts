@@ -39,6 +39,19 @@ describe('simplifyRoute', () => {
     expect(haversineM(s.geometry[1] ?? g[0] ?? { lat: 0, lng: 0 }, g[0] ?? { lat: 0, lng: 0 })).toBeGreaterThan(0);
   });
 
+  it('una ida y vuelta (extremos iguales) conserva el punto más lejano', () => {
+    const g = [
+      { lat: 37, lng: -4 },
+      { lat: 37.001, lng: -4 },
+      { lat: 37.01, lng: -4 },
+      { lat: 37.001, lng: -4 },
+      { lat: 37, lng: -4 },
+    ];
+    const s = simplifyRoute(route(g), 15);
+    expect(s.geometry).toContainEqual({ lat: 37.01, lng: -4 });
+    expect(s.geometry).toHaveLength(3);
+  });
+
   it('rutas de 0, 1 o 2 vértices se devuelven igual', () => {
     for (const n of [1, 2]) {
       const g = Array.from({ length: n }, (_, i) => ({ lat: 37 + i, lng: -4 }));

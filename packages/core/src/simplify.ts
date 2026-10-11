@@ -12,7 +12,8 @@ export function simplifyRoute(route: Route, toleranceM = 15): Route {
   if (g.length <= 2) return route;
   const lat0 = ((g[0]?.lat ?? 0) * Math.PI) / 180;
   const kx = Math.cos(lat0) * M_PER_DEG;
-  const xy = g.map((p) => [p.lng * kx, p.lat * M_PER_DEG] as const);
+  const xs = Float64Array.from(g, (p) => p.lng * kx);
+  const ys = Float64Array.from(g, (p) => p.lat * M_PER_DEG);
   const keep = new Uint8Array(g.length);
   keep[0] = 1;
   keep[g.length - 1] = 1;
@@ -20,17 +21,18 @@ export function simplifyRoute(route: Route, toleranceM = 15): Route {
   const tol2 = toleranceM * toleranceM;
   while (stack.length) {
     const [a, b] = stack.pop() as [number, number];
-    const [ax, ay] = xy[a] ?? [0, 0];
-    const [bx, by] = xy[b] ?? [0, 0];
-    const dx = bx - ax;
-    const dy = by - ay;
+    const ax = xs[a] as number;
+    const ay = ys[a] as number;
+    const dx = (xs[b] as number) - ax;
+    const dy = (ys[b] as number) - ay;
     const len2 = dx * dx + dy * dy;
     let maxD = -1;
     let idx = -1;
     for (let i = a + 1; i < b; i++) {
-      const [px, py] = xy[i] ?? [0, 0];
-      let t = len2 > 0 ? ((px - ax) * dx + (py - ay) * dy) / len2 : 0;
-      t = Math.max(0, Math.min(1, t));
+      const px = xs[i] as number;
+      const py = ys[i] as number;
+      // Proyección sobre el segmento (si los extremos coinciden, distancia al punto).
+      const t = len2 > 0 ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / len2)) : 0;
       const ex = ax + t * dx - px;
       const ey = ay + t * dy - py;
       const d2 = ex * ex + ey * ey;
@@ -46,11 +48,10 @@ export function simplifyRoute(route: Route, toleranceM = 15): Route {
   }
   const geometry: LatLng[] = [];
   const cumDurationS: number[] = [];
-  keep.forEach((k, i) => {
-    if (!k) return;
-    const p = g[i];
-    if (p) geometry.push(p);
-    cumDurationS.push(route.cumDurationS[i] ?? 0);
-  });
+  for (let i = 0; i < g.length; i++) {
+    if (!keep[i]) continue;
+    geometry.push(g[i] as LatLng);
+    cumDurationS.push(route.cumDurationS[i] as number);
+  }
   return { ...route, geometry, cumDurationS };
 }
