@@ -121,6 +121,8 @@ export const en: Dict = {
     upTo: (km) => `up to ${km} km`,
   },
   status: {
+    routingDownBody: 'It may be a brief outage of the public servers. Retry in a few seconds.',
+    weatherPartial: 'Forecast missing for some stretches: they are shown without risk.',
     routing: 'Finding routes…',
     weather: 'Getting the forecast for each stretch…',
     noRoute: 'There is no driving route between those points.',

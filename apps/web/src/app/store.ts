@@ -9,7 +9,7 @@ import {
 } from '@routecast/core';
 import type { HourlyWeather, Place, RiskLevelOrUnknown, Route } from '@routecast/shared';
 import type { ProviderError } from '@routecast/shared/providers';
-import { batch, createMemo, createSignal, onCleanup } from 'solid-js';
+import { batch, createEffect, createMemo, createSignal, onCleanup } from 'solid-js';
 import type { Services } from './services';
 import { HORIZON_MIN, localMidnightMs, MIN_MS, nextStep, STEP_MIN } from './time';
 import { WeatherCache } from './weatherCache';
@@ -48,12 +48,14 @@ export function createAppStore(services: Services, opts: StoreOptions = {}) {
   const [nowMs, setNowMs] = createSignal(clock());
   const [from, setFrom] = createSignal<Place | null>(null);
   const [to, setTo] = createSignal<Place | null>(null);
-  const [departureMs, setDepartureMs] = createSignal(nextStep(clock()));
+  const [departureMs, setDepartureRaw] = createSignal(nextStep(clock()));
   const [views, setViews] = createSignal<RouteView[]>([]);
   const [selected, setSelected] = createSignal<string | null>(null);
   const [phase, setPhase] = createSignal<Phase>('idle');
   const [routeError, setRouteError] = createSignal<ProviderError | null>(null);
   const [weatherError, setWeatherError] = createSignal<ProviderError | null>(null);
+  /** Hay celdas sin previsión (lote fallido): esos tramos salen sin riesgo calculado. */
+  const [weatherPartial, setWeatherPartial] = createSignal(false);
   const [weatherVersion, setWeatherVersion] = createSignal(0);
   const [usedProvider, setUsedProvider] = createSignal<string | null>(null);
   const weather = new Map<string, HourlyWeather>();
@@ -74,15 +76,20 @@ export function createAppStore(services: Services, opts: StoreOptions = {}) {
         setViews([]);
         setPhase('idle');
         setRouteError(null);
+        setWeatherError(null);
+        setWeatherPartial(false);
+        setUsedProvider(null);
       });
       return;
     }
     const c = new AbortController();
     ctrl = c;
     batch(() => {
+      setViews([]);
       setPhase('routing');
       setRouteError(null);
       setWeatherError(null);
+      setWeatherPartial(false);
     });
 
     const res = await services.routing.getRoutes(a.at, b.at, { alternatives: MAX_ROUTES - 1, signal: c.signal });
@@ -121,6 +128,7 @@ export function createAppStore(services: Services, opts: StoreOptions = {}) {
       if (w.ok) {
         for (const h of w.value) weather.set(h.cell, h);
         void cache.putMany(w.value);
+        if (w.value.length < missing.length) setWeatherPartial(true);
       } else {
         setWeatherError(w.error);
       }
@@ -170,6 +178,19 @@ export function createAppStore(services: Services, opts: StoreOptions = {}) {
     }));
   });
 
+  /** Toda hora de salida (dial, URL) se acota al horizonte ofrecido. */
+  const setDepartureMs = (ms: number) => {
+    const lo = dayStart() + pickerMin() * MIN_MS;
+    const hi = dayStart() + pickerMax() * MIN_MS;
+    setDepartureRaw(Math.min(hi, Math.max(lo, Math.round(ms / (STEP_MIN * MIN_MS)) * STEP_MIN * MIN_MS)));
+  };
+
+  // Con la pestaña abierta el tiempo avanza: una salida que queda en el pasado sube a «ahora».
+  createEffect(() => {
+    const lo = dayStart() + pickerMin() * MIN_MS;
+    if (departureMs() < lo) setDepartureRaw(lo);
+  });
+
   const setDepartureMinutes = (m: number) => {
     const clamped = Math.min(pickerMax(), Math.max(pickerMin(), Math.round(m / STEP_MIN) * STEP_MIN));
     setDepartureMs(dayStart() + clamped * MIN_MS);
@@ -187,6 +208,7 @@ export function createAppStore(services: Services, opts: StoreOptions = {}) {
     phase,
     routeError,
     weatherError,
+    weatherPartial,
     usedProvider,
     // derivados
     evaluated,

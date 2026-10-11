@@ -89,6 +89,22 @@ describe('OpenMeteoWeather (fixtures reales)', () => {
     expect(r.ok === false && r.error.kind).toBe('rate_limited');
   });
 
+  it('si falla el segundo lote, devuelve lo ya descargado (parcial) en vez de nada', async () => {
+    const single = fixture('open-meteo-single.json');
+    let requests = 0;
+    server.use(
+      http.get(OM, ({ request }) => {
+        requests++;
+        if (requests > 1) return new HttpResponse(null, { status: 503 });
+        const n = new URL(request.url).searchParams.get('latitude')?.split(',').length ?? 0;
+        return HttpResponse.json(Array.from({ length: n }, () => single));
+      }),
+    );
+    const many = Array.from({ length: 60 }, (_, i) => ({ key: `k${i}`, at: { lat: 37 + i * 0.1, lng: -4 } }));
+    const r = await new OpenMeteoWeather({ clock: fakeClock() }).getHourly(many, { signal: signal() });
+    expect(r.ok && r.value).toHaveLength(50);
+  });
+
   it('trocea en lotes de 50 celdas', async () => {
     const single = fixture('open-meteo-single.json');
     let requests = 0;

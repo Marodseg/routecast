@@ -34,6 +34,12 @@ const SPAIN: [[number, number], [number, number]] = [
 
 const levelNum = (l: RiskLevelOrUnknown) => (l === 'unknown' ? -1 : l);
 
+/** Validación mínima del estilo externo (CLAUDE.md regla 4): lo justo para que MapLibre no falle a ciegas. */
+function isStyle(v: unknown): v is StyleSpecification {
+  const s = v as Partial<StyleSpecification> | null;
+  return !!s && s.version === 8 && typeof s.sources === 'object' && s.sources !== null && Array.isArray(s.layers);
+}
+
 type Fc = FeatureCollection;
 const fc = (features: Feature[]): Fc => ({ type: 'FeatureCollection', features });
 const line = (pts: LatLng[], props: Record<string, unknown>): Feature => ({
@@ -74,6 +80,7 @@ export function RouteMap(props: RouteMapProps) {
   let base: StyleSpecification | undefined;
   const [ready, setReady] = createSignal(false);
   const [failed, setFailed] = createSignal(false);
+  let onStyleLoad: (() => void) | undefined;
 
   const data = () => {
     const segs: Feature[] = [];
@@ -100,6 +107,7 @@ export function RouteMap(props: RouteMapProps) {
   const setSource = (id: string, d: Fc) => (map?.getSource(id) as GeoJSONSource | undefined)?.setData(d);
 
   function addRouteLayers(m: MlMap) {
+    if (m.getLayer('route-fill')) return;
     const c = themeColors(props.dark);
     const rgba = (v: typeof c.riskPattern): [number, number, number, number] => {
       const [r, g, b] = toLinearSrgb(v).map((x) =>
@@ -218,12 +226,17 @@ export function RouteMap(props: RouteMapProps) {
     const pts = (letter ? props.routes.filter((r) => r.letter === letter) : props.routes).flatMap((r) => r.geometry);
     const all = pts.length ? pts : props.routes.flatMap((r) => r.geometry);
     if (all.length < 2) return;
-    const lngs = all.map((p) => p.lng);
-    const lats = all.map((p) => p.lat);
+    let [w, sth, e, n] = [180, 90, -180, -90];
+    for (const p of all) {
+      if (p.lng < w) w = p.lng;
+      if (p.lng > e) e = p.lng;
+      if (p.lat < sth) sth = p.lat;
+      if (p.lat > n) n = p.lat;
+    }
     map.fitBounds(
       [
-        [Math.min(...lngs), Math.min(...lats)],
-        [Math.max(...lngs), Math.max(...lats)],
+        [w, sth],
+        [e, n],
       ],
       { padding: props.padding(), duration: reducedMotion() ? 0 : 700, maxZoom: 11 },
     );
@@ -235,14 +248,16 @@ export function RouteMap(props: RouteMapProps) {
     try {
       const [{ Map: MapCtor, AttributionControl, setWorkerUrl }, styleRes, , workerUrl] = await Promise.all([
         import('maplibre-gl'),
-        fetch(BASE_STYLE_URL, { signal: ctrl.signal }),
+        fetch(BASE_STYLE_URL, { signal: AbortSignal.any([ctrl.signal, AbortSignal.timeout(10_000)]) }),
         import('maplibre-gl/dist/maplibre-gl.css'),
         // El worker de MapLibre 6 es un fichero aparte: Vite lo emite como recurso y aquí se le indica la URL.
         import('maplibre-gl/dist/maplibre-gl-worker.mjs?url').then((m: { default: string }) => m.default),
       ]);
       setWorkerUrl(workerUrl);
       if (!styleRes.ok) throw new Error(`style ${styleRes.status}`);
-      base = (await styleRes.json()) as StyleSpecification;
+      const raw: unknown = await styleRes.json();
+      if (!isStyle(raw)) throw new Error('estilo no válido');
+      base = raw;
       if (ctrl.signal.aborted) return;
       map = new MapCtor({
         container,
@@ -254,6 +269,10 @@ export function RouteMap(props: RouteMapProps) {
       });
       map.addControl(new AttributionControl({ compact: true }), 'bottom-right');
       map.touchZoomRotate.disableRotation();
+      // Errores de teselas sueltas no rompen nada; si el estilo no llega a cargar, se muestra el aviso.
+      map.on('error', () => {
+        if (!ready()) setFailed(true);
+      });
       map.on('load', () => {
         if (!map) return;
         addRouteLayers(map);
@@ -306,8 +325,14 @@ export function RouteMap(props: RouteMapProps) {
       () => props.dark,
       (dark) => {
         if (!map || !base || !ready()) return;
-        map.setStyle(recolor(base, dark), { diff: false });
-        map.once('styledata', () => map && addRouteLayers(map));
+        const m = map;
+        if (onStyleLoad) m.off('style.load', onStyleLoad);
+        onStyleLoad = () => {
+          onStyleLoad = undefined;
+          addRouteLayers(m);
+        };
+        m.once('style.load', onStyleLoad);
+        m.setStyle(recolor(base, dark), { diff: false });
       },
       { defer: true },
     ),

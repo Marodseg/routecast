@@ -12,7 +12,9 @@ const encPlace = (p: Place) => `${p.at.lat.toFixed(5)},${p.at.lng.toFixed(5)},${
 
 function decPlace(v: string | null, id: string): Place | undefined {
   if (!v) return undefined;
-  const [lat, lng, ...name] = v.split(',');
+  const [lat = '', lng = '', ...name] = v.split(',');
+  const NUM = /^-?\d{1,3}(\.\d{1,8})?$/;
+  if (!NUM.test(lat.trim()) || !NUM.test(lng.trim())) return undefined;
   const la = Number(lat);
   const ln = Number(lng);
   if (!Number.isFinite(la) || !Number.isFinite(ln) || Math.abs(la) > 90 || Math.abs(ln) > 180) return undefined;

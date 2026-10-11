@@ -20,6 +20,11 @@ describe('estado en la URL', () => {
     expect(s).toEqual({});
   });
 
+  it('rechaza coordenadas vacías o no numéricas (no se convierten en 0,0)', () => {
+    expect(readUrl('?from=,,x&to=%20,%20,y')).toEqual({});
+    expect(readUrl('?from=1e2,3,x')).toEqual({});
+  });
+
   it('acota nombres larguísimos', () => {
     const s = readUrl(`?from=37,-4,${'x'.repeat(500)}`);
     expect(s.from?.name.length).toBe(120);

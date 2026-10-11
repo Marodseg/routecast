@@ -119,6 +119,8 @@ export const es = {
     upTo: (km: number) => `hasta ${km} km`,
   },
   status: {
+    routingDownBody: 'Puede ser un corte momentáneo de los servidores públicos. Reintenta en unos segundos.',
+    weatherPartial: 'Falta la previsión de algunos tramos: se muestran sin riesgo calculado.',
     routing: 'Buscando rutas…',
     weather: 'Consultando la previsión en cada tramo…',
     noRoute: 'No hay ruta en coche entre esos puntos.',

@@ -79,6 +79,8 @@ export class Throttle {
     const at = Math.max(now, this.#next);
     this.#next = at + this.minIntervalMs;
     await this.clock.sleep(at - now, signal);
+    // Si se canceló mientras esperaba, no ha llegado a pedir nada: devuelve el hueco.
+    if (signal.aborted && this.#next === at + this.minIntervalMs) this.#next = at;
   }
 }
 

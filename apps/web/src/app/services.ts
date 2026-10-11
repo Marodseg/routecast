@@ -7,12 +7,24 @@ import type { GeocodingProvider, RoutingProvider, WeatherProvider } from '@route
  */
 export interface Services {
   routing: RoutingProvider & { status?: () => { id: string; state: string }[] };
+  /** Nombre visible del proveedor de una ruta (atribución). */
+  providerLabel: (providerId: string) => string;
+  /** ¿La ruta viene de un proveedor de respaldo? (la UI lo indica). */
+  isFallback: (providerId: string) => boolean;
   weather: WeatherProvider;
   geocoding: GeocodingProvider;
 }
 
+const LABELS: Record<string, string> = {
+  valhalla: 'Valhalla (FOSSGIS)',
+  'osrm-fossgis': 'OSRM (FOSSGIS)',
+  'osrm-demo': 'OSRM',
+};
+
 export function createServices(): Services {
   return {
+    providerLabel: (id) => LABELS[id] ?? id,
+    isFallback: (id) => id !== 'valhalla',
     routing: new FallbackRouting([
       { provider: new ValhallaRouting() },
       { provider: new OsrmRouting({ id: 'osrm-fossgis', baseUrl: 'https://routing.openstreetmap.de/routed-car' }) },

@@ -116,6 +116,17 @@ describe('FallbackRouting', () => {
 });
 
 describe('Throttle', () => {
+  it('una espera cancelada devuelve su hueco', async () => {
+    const c = clock();
+    const t = new Throttle(1000, c);
+    await t.wait(signal());
+    const ab = new AbortController();
+    ab.abort();
+    await t.wait(ab.signal);
+    await t.wait(signal());
+    expect(c.slept).toEqual([0, 1000, 0]);
+  });
+
   it('espacia las peticiones al menos 1 s (≤ 1 req/s a demos públicos)', async () => {
     const c = clock();
     const t = new Throttle(1000, c);

@@ -138,7 +138,8 @@ export class OpenMeteoWeather implements WeatherProvider {
           if (opts.signal.aborted) return err({ kind: 'aborted' });
           continue;
         }
-        return res;
+        // Lo ya descargado sigue valiendo: se devuelve parcial y quien llama detecta las celdas que faltan.
+        return out.length > 0 ? ok(out) : res;
       }
     }
     return ok(out);

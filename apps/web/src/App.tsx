@@ -21,23 +21,33 @@ import { RoadWind } from './ui/RoadWind/RoadWind';
 import { type CompareRoute, RouteCompare } from './ui/RouteCompare/RouteCompare';
 import { LangToggle, ThemeToggle } from './ui/Toggles/Toggles';
 
-const PROVIDER_LABEL: Record<string, string> = {
-  valhalla: 'Valhalla (FOSSGIS)',
-  'osrm-fossgis': 'OSRM (FOSSGIS)',
-  'osrm-demo': 'OSRM',
-};
-
 const RECENT_KEY = 'routecast:recent';
+/** localStorage es entrada no confiable (otras versiones, extensiones): solo lugares bien formados. */
+function isPlace(v: unknown): v is Place {
+  const p = v as Partial<Place> | null;
+  return (
+    !!p &&
+    typeof p.id === 'string' &&
+    typeof p.name === 'string' &&
+    p.name.length > 0 &&
+    !!p.at &&
+    Number.isFinite(p.at.lat) &&
+    Number.isFinite(p.at.lng) &&
+    Math.abs(p.at.lat) <= 90 &&
+    Math.abs(p.at.lng) <= 180
+  );
+}
+
 function loadRecent(): Place[] {
   try {
     const v = JSON.parse(globalThis.localStorage?.getItem(RECENT_KEY) ?? '[]');
-    return Array.isArray(v) ? (v as Place[]).slice(0, 5) : [];
+    return Array.isArray(v) ? v.filter(isPlace).slice(0, 5) : [];
   } catch {
     return [];
   }
 }
 function saveRecent(p: Place, list: Place[]): Place[] {
-  const next = [p, ...list.filter((x) => x.id !== p.id && x.name !== p.name)].slice(0, 5);
+  const next = [p, ...list.filter((x) => x.id !== p.id)].slice(0, 5);
   try {
     globalThis.localStorage?.setItem(RECENT_KEY, JSON.stringify(next));
   } catch {
@@ -68,7 +78,7 @@ export function App(props: { services?: Services }) {
   batch(() => {
     if (url.from) store.setFrom(url.from);
     if (url.to) store.setTo(url.to);
-    if (url.departureMs && url.departureMs > store.nowMs()) store.setDepartureMs(url.departureMs);
+    if (url.departureMs) store.setDepartureMs(url.departureMs);
     if (url.route) store.setSelected(url.route);
   });
 
@@ -106,7 +116,7 @@ export function App(props: { services?: Services }) {
       return {
         id: view.letter,
         name: view.route.name || t().route.unnamed,
-        via: PROVIDER_LABEL[view.route.provider] ?? view.route.provider,
+        via: services.providerLabel(view.route.provider),
         distanceKm: Math.round(view.route.distanceM / 1000),
         durationMin: Math.round(view.route.durationS / 60),
         arrival: localHHMM(store.departureMs() + view.route.durationS * 1000),
@@ -224,7 +234,12 @@ export function App(props: { services?: Services }) {
             {store.weatherError()?.kind === 'rate_limited' ? t().status.rateLimited : t().status.weatherDown}
           </p>
         </Show>
-        <Show when={store.usedProvider() && store.usedProvider() !== 'valhalla'}>
+        <Show when={store.weatherPartial()}>
+          <p class={s.warn}>
+            <Icon name="warning" size={14} /> {t().status.weatherPartial}
+          </p>
+        </Show>
+        <Show when={store.usedProvider() && services.isFallback(store.usedProvider() ?? '')}>
           <p class={s.note}>{t().status.fallback}</p>
         </Show>
         <Show when={partial()}>{(n) => <p class={s.note}>{n()}</p>}</Show>
@@ -239,7 +254,13 @@ export function App(props: { services?: Services }) {
             icon="warning"
             tone="warning"
             title={store.routeError()?.kind === 'no_route' ? t().empty.noRouteTitle : t().status.routingDown}
-            body={store.routeError()?.kind === 'no_route' ? t().empty.noRouteBody : t().status.rateLimited}
+            body={
+              store.routeError()?.kind === 'no_route'
+                ? t().empty.noRouteBody
+                : store.routeError()?.kind === 'rate_limited'
+                  ? t().status.rateLimited
+                  : t().status.routingDownBody
+            }
             action={{ label: t().status.retry, onClick: () => void store.load() }}
           />
         </Match>
