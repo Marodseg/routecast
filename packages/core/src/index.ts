@@ -20,6 +20,7 @@ export {
 export { DEFAULT_RESAMPLE, type ResampleOptions, type RouteSample, resample } from './resample';
 export { type FactorLevels, type HourScore, type PointAssessment, scoreHour, scorePoint } from './scoring/score';
 export { DEFAULT_THRESHOLDS, type Thresholds } from './scoring/thresholds';
+export { simplifyRoute } from './simplify';
 export {
   type AreaWarning,
   pointInPolygons,

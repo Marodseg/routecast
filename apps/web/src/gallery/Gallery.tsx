@@ -223,6 +223,9 @@ export function Gallery() {
           <div class={s.twoCol}>
             <RouteCompare routes={compare()} selected={sel()} onSelect={setSel} />
             <div class="plate" style={{ padding: 'var(--space-4)', 'background-color': 'var(--surface)' }}>
+              <p class="label" style={{ 'margin-bottom': 'var(--space-3)' }}>
+                Estado de carga (Skeleton)
+              </p>
               <Skeleton lines={4} />
             </div>
           </div>

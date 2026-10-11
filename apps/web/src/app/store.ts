@@ -6,6 +6,7 @@ import {
   type RouteWarningHit,
   rankRoutes,
   resample,
+  simplifyRoute,
   uniqueCells,
   warningsOnRoute,
 } from '@routecast/core';
@@ -176,12 +177,16 @@ export function createAppStore(services: Services, opts: StoreOptions = {}) {
     }
 
     if (!usingSaved) void saveLast({ key: queryKey(a, b), routes: res.value.slice(0, MAX_ROUTES), savedAtMs: clock() });
-    const next: RouteView[] = res.value.slice(0, MAX_ROUTES).map((route, i) => ({
-      letter: LETTERS[i] ?? String(i + 1),
-      route,
-      samples: resample(route),
-      cumM: cumulativeDistancesM(route.geometry),
-    }));
+    // Geometría simplificada (15 m): mismas rutas con ~10× menos vértices; muestreo y mapa fluidos en rutas largas.
+    const next: RouteView[] = res.value
+      .slice(0, MAX_ROUTES)
+      .map((full) => simplifyRoute(full, 15))
+      .map((route, i) => ({
+        letter: LETTERS[i] ?? String(i + 1),
+        route,
+        samples: resample(route),
+        cumM: cumulativeDistancesM(route.geometry),
+      }));
     batch(() => {
       setViews(next);
       setUsedProvider(res.value[0]?.provider ?? null);

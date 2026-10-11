@@ -110,29 +110,48 @@ export function smoothedHeadingAt(
   d: number,
   windowM: number,
 ): number {
+  const n = geometry.length;
+  if (n < 2) return 0;
+  // Solo los segmentos que tocan la ventana: O(log n + k). Recorrer toda la ruta en cada consulta era O(n) y, al
+  // muestrear rutas largas y densas (≈ 60.000 vértices), O(n²): bloqueaba el navegador.
   const angles: number[] = [];
   const weights: number[] = [];
-  let nearest: number | null = null;
-  let nearestGap = Number.POSITIVE_INFINITY;
-  for (let i = 0; i < geometry.length - 1; i++) {
+  for (let i = Math.max(0, upperBound(cum, d - windowM) - 1); i < n - 1 && (cum[i] ?? 0) < d + windowM; i++) {
     const a = geometry[i];
     const b = geometry[i + 1];
     const s0 = cum[i] ?? 0;
     const s1 = cum[i + 1] ?? 0;
     if (!a || !b || s1 - s0 <= 0) continue;
     const overlap = Math.min(s1, d + windowM) - Math.max(s0, d - windowM);
-    const h = bearingDeg(a, b);
     if (overlap > 0) {
-      angles.push(h);
+      angles.push(bearingDeg(a, b));
       weights.push(overlap);
     }
-    const gap = d < s0 ? s0 - d : d > s1 ? d - s1 : 0;
-    if (gap < nearestGap) {
-      nearestGap = gap;
-      nearest = h;
+  }
+  const mean = circularMeanDeg(angles, weights);
+  if (mean !== null) return mean;
+  // Sin solape (fuera de la ruta o ventana sobre segmentos de longitud 0): el segmento con longitud más cercano.
+  const k = Math.min(n - 2, Math.max(0, upperBound(cum, d) - 1));
+  for (let off = 0; off < n; off++) {
+    for (const i of off ? [k - off, k + off] : [k]) {
+      const a = geometry[i];
+      const b = geometry[i + 1];
+      if (a && b && (cum[i + 1] ?? 0) - (cum[i] ?? 0) > 0) return bearingDeg(a, b);
     }
   }
-  return circularMeanDeg(angles, weights) ?? nearest ?? 0;
+  return 0;
+}
+
+/** Primer índice con cum[i] > x (búsqueda binaria; cum es no decreciente). */
+function upperBound(cum: readonly number[], x: number): number {
+  let lo = 0;
+  let hi = cum.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if ((cum[mid] ?? 0) > x) hi = mid;
+    else lo = mid + 1;
+  }
+  return lo;
 }
 
 /** Trozo de la polilínea entre dos distancias (m), con los extremos interpolados. */
