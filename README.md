@@ -3,7 +3,9 @@
 Compara rutas en coche según **el tiempo que hará en cada tramo a la hora en que pases tú**: lluvia fuerte, rachas,
 viento cruzado, riesgo de tormenta con granizo, nieve/hielo y niebla. Para decidir por dónde ir y cuándo salir.
 
-> **Estado:** en desarrollo — fase 3 (MVP extremo a extremo) del [ROADMAP](docs/ROADMAP.md): búsqueda, rutas alternativas, riesgo por tramo y selector de hora funcionan con APIs reales. Galería de componentes en `/dev/gallery/`.
+**Pruébala:** https://marodseg.github.io/routecast/ · API: https://routecast-api.marodseg.workers.dev/api/health
+
+> **Estado:** en desarrollo (fase 4 completada del [ROADMAP](docs/ROADMAP.md)): búsqueda, rutas alternativas, riesgo por tramo a la hora de paso, selector de hora, avisos oficiales de AEMET/Meteoalarm y PWA. Galería de componentes en `/dev/gallery/`.
 
 Proyecto personal, sin monetización, con coste 0 €. Ámbito inicial: España.
 
@@ -39,7 +41,8 @@ pnpm size         # presupuesto de bundle
 
 - **Web**: `deploy-web.yml` publica `apps/web` en GitHub Pages en cada push a `main`. Protege `main` exigiendo el
   check de CI para que nunca se despliegue algo en rojo.
-- **Worker**: pendiente (fase 4).
+- **Worker**: `deploy-worker.yml` (necesita `CLOUDFLARE_API_TOKEN` y `CLOUDFLARE_ACCOUNT_ID` como secretos del repo; sin ellos se omite) o a mano con `pnpm --filter @routecast/worker exec wrangler deploy`. Claves con `wrangler secret put AEMET_API_KEY` y `ORS_API_KEY`.
+- **Desarrollo local**: copia `apps/worker/dev.vars.example` a `apps/worker/.dev.vars` con tus claves y ejecuta `pnpm dev`.
 
 ## Fuentes de datos
 
