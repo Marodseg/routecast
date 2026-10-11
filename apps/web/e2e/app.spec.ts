@@ -64,6 +64,8 @@ test('429 de la previsión: se reintenta y se informa sin romper', async ({ page
 });
 
 test('sin violaciones de accesibilidad con resultados', async ({ page }) => {
+  // Sin animaciones: axe mide el estado final (no un fundido a medias de las cifras o del trazado).
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   await mockNetwork(page);
   await page.goto('/?from=36.72130,-4.42140,M%C3%A1laga&to=37.17350,-3.59953,Granada');
   await expect(compareRows(page)).toHaveCount(2);
