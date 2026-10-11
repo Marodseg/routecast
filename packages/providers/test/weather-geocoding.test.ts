@@ -102,22 +102,50 @@ describe('OpenMeteoWeather (fixtures reales)', () => {
     );
     const many = Array.from({ length: 60 }, (_, i) => ({ key: `k${i}`, at: { lat: 37 + i * 0.1, lng: -4 } }));
     const r = await new OpenMeteoWeather({ clock: fakeClock() }).getHourly(many, { signal: signal() });
-    expect(r.ok && r.value).toHaveLength(50);
+    expect(r.ok && r.value.map((h) => h.cell)).toEqual(many.slice(0, 20).map((c) => c.key));
   });
 
-  it('trocea en lotes de 50 celdas', async () => {
-    const single = fixture('open-meteo-single.json');
-    let requests = 0;
+  it('si fallan todos los lotes devuelve el error', async () => {
+    server.use(http.get(OM, () => new HttpResponse(null, { status: 503 })));
+    const many = Array.from({ length: 30 }, (_, i) => ({ key: `k${i}`, at: { lat: 37 + i * 0.1, lng: -4 } }));
+    const r = await new OpenMeteoWeather({ clock: fakeClock() }).getHourly(many, { signal: signal() });
+    expect(r.ok).toBe(false);
+  });
+
+  it('cancelado a mitad: aborted', async () => {
+    const ctrl = new AbortController();
     server.use(
-      http.get(OM, ({ request }) => {
-        requests++;
+      http.get(OM, () => {
+        ctrl.abort();
+        return new HttpResponse(null, { status: 503 });
+      }),
+    );
+    const many = Array.from({ length: 50 }, (_, i) => ({ key: `k${i}`, at: { lat: 37 + i * 0.1, lng: -4 } }));
+    const r = await new OpenMeteoWeather({ clock: fakeClock() }).getHourly(many, { signal: ctrl.signal });
+    expect(r.ok === false && r.error.kind).toBe('aborted');
+  });
+
+  it('trocea en lotes de 20 celdas, como mucho 3 a la vez, y conserva el orden', async () => {
+    const single = fixture('open-meteo-single.json');
+    const sizes: number[] = [];
+    let inFlight = 0;
+    let maxInFlight = 0;
+    server.use(
+      http.get(OM, async ({ request }) => {
+        inFlight++;
+        maxInFlight = Math.max(maxInFlight, inFlight);
         const n = new URL(request.url).searchParams.get('latitude')?.split(',').length ?? 0;
+        sizes.push(n);
+        // El primer lote tarda más: el orden del resultado no puede depender de quién responde antes.
+        await new Promise((r) => setTimeout(r, sizes.length === 1 ? 30 : 5));
+        inFlight--;
         return HttpResponse.json(n === 1 ? single : Array.from({ length: n }, () => single));
       }),
     );
-    const many = Array.from({ length: 51 }, (_, i) => ({ key: `k${i}`, at: { lat: 37 + i * 0.1, lng: -4 } }));
-    const r = await new OpenMeteoWeather().getHourly(many, { signal: signal() });
-    expect(requests).toBe(2);
+    const many = Array.from({ length: 81 }, (_, i) => ({ key: `k${i}`, at: { lat: 37 + i * 0.1, lng: -4 } }));
+    const r = await new OpenMeteoWeather({ clock: fakeClock() }).getHourly(many, { signal: signal() });
+    expect([...sizes].sort((x, y) => y - x)).toEqual([20, 20, 20, 20, 1]);
+    expect(maxInFlight).toBe(3);
     expect(r.ok && r.value.map((h) => h.cell)).toEqual(many.map((c) => c.key));
   });
 });
