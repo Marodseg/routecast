@@ -81,7 +81,9 @@ test('avisos oficiales: la ruta que cruza la zona en la ventana muestra el aviso
   await expect(page.getByText('1 aviso en tu ruta')).toBeVisible();
   await page.getByText('1 aviso en tu ruta').click();
   await expect(page.getByText(/Antequera · km \d+–\d+ · pasas hacia las/)).toBeVisible();
-  await expect(page.locator('details').filter({ hasText: '1 aviso en tu ruta' }).getByText('Fuente: AEMET')).toBeVisible();
+  await expect(
+    page.locator('details').filter({ hasText: '1 aviso en tu ruta' }).getByText('Fuente: AEMET'),
+  ).toBeVisible();
 });
 
 test('Worker caído: rutas y riesgo siguen y se avisa de que no hay avisos oficiales disponibles', async ({ page }) => {
