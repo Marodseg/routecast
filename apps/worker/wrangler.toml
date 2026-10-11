@@ -7,7 +7,7 @@ compatibility_flags = ["nodejs_compat"]
 # En local van en .dev.vars (ignorado por git).
 
 [vars]
-ALLOWED_ORIGINS = "http://localhost:5173,http://localhost:4173"
+ALLOWED_ORIGINS = "https://marodseg.github.io,http://localhost:5173,http://localhost:4173"
 
 # Rate limiting best-effort por IP: 60 peticiones/min por ubicación (ARCHITECTURE §6).
 [[ratelimits]]
