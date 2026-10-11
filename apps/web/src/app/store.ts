@@ -3,16 +3,18 @@ import {
   type Evaluation,
   evaluateRoute,
   type RouteSample,
+  type RouteWarningHit,
   rankRoutes,
   resample,
   uniqueCells,
+  warningsOnRoute,
 } from '@routecast/core';
 import type { HourlyWeather, Place, RiskLevelOrUnknown, Route } from '@routecast/shared';
-import type { ProviderError } from '@routecast/shared/providers';
+import type { ProviderError, Warning } from '@routecast/shared/providers';
 import { batch, createEffect, createMemo, createSignal, onCleanup } from 'solid-js';
 import type { Services } from './services';
 import { HORIZON_MIN, localMidnightMs, MIN_MS, nextStep, STEP_MIN } from './time';
-import { WeatherCache } from './weatherCache';
+import { loadLast, saveLast, WeatherCache } from './weatherCache';
 
 export const LETTERS = ['A', 'B', 'C'] as const;
 export const MAX_ROUTES = 3;
@@ -30,7 +32,12 @@ export type Phase = 'idle' | 'routing' | 'weather' | 'ready' | 'error';
 export interface Evaluated {
   view: RouteView;
   ev: Evaluation;
+  /** Avisos oficiales que cruzan la ruta a la hora de paso. */
+  alerts: RouteWarningHit<Warning>[];
 }
+
+/** Estado de los avisos oficiales: «off» = no hay Worker configurado (distinto de «no hay avisos»). */
+export type WarningsStatus = 'off' | 'idle' | 'loading' | 'ok' | 'partial' | 'down';
 
 export interface StoreOptions {
   now?: () => number;
@@ -58,7 +65,48 @@ export function createAppStore(services: Services, opts: StoreOptions = {}) {
   const [weatherPartial, setWeatherPartial] = createSignal(false);
   const [weatherVersion, setWeatherVersion] = createSignal(0);
   const [usedProvider, setUsedProvider] = createSignal<string | null>(null);
+  /** Se muestran rutas guardadas porque no hay conexión. */
+  const [offline, setOffline] = createSignal(false);
+  const queryKey = (a: Place, b: Place) =>
+    `${a.at.lat.toFixed(4)},${a.at.lng.toFixed(4)};${b.at.lat.toFixed(4)},${b.at.lng.toFixed(4)}`;
   const weather = new Map<string, HourlyWeather>();
+  const [warnings, setWarnings] = createSignal<Warning[]>([]);
+  const [warningsStatus, setWarningsStatus] = createSignal<WarningsStatus>(services.warnings ? 'idle' : 'off');
+
+  /** Avisos de la caja que cubre todas las rutas, para toda la ventana de salida ofrecida (una petición por consulta). */
+  async function loadWarnings(views: RouteView[], signal: AbortSignal): Promise<void> {
+    const provider = services.warnings;
+    if (!provider || !views.length) return;
+    let [w, s, e, n] = [180, 90, -180, -90];
+    for (const v of views) {
+      for (const p of v.route.geometry) {
+        if (p.lng < w) w = p.lng;
+        if (p.lng > e) e = p.lng;
+        if (p.lat < s) s = p.lat;
+        if (p.lat > n) n = p.lat;
+      }
+    }
+    const longest = Math.max(...views.map((v) => v.route.durationS)) * 1000;
+    const start = clock();
+    setWarningsStatus('loading');
+    const res = await provider.getWarnings(
+      [w - 0.05, s - 0.05, e + 0.05, n + 0.05],
+      [start, start + HORIZON_MIN * MIN_MS + longest],
+      {
+        signal,
+      },
+    );
+    if (signal.aborted) return;
+    batch(() => {
+      if (res.ok) {
+        setWarnings(res.value.warnings);
+        setWarningsStatus(res.value.partial ? 'partial' : 'ok');
+      } else {
+        setWarnings([]);
+        setWarningsStatus('down');
+      }
+    });
+  }
 
   const tick = setInterval(() => setNowMs(clock()), 60_000);
   onCleanup(() => clearInterval(tick));
@@ -79,6 +127,8 @@ export function createAppStore(services: Services, opts: StoreOptions = {}) {
         setWeatherError(null);
         setWeatherPartial(false);
         setUsedProvider(null);
+        setWarnings([]);
+        if (services.warnings) setWarningsStatus('idle');
       });
       return;
     }
@@ -92,8 +142,19 @@ export function createAppStore(services: Services, opts: StoreOptions = {}) {
       setWeatherPartial(false);
     });
 
-    const res = await services.routing.getRoutes(a.at, b.at, { alternatives: MAX_ROUTES - 1, signal: c.signal });
+    let res = await services.routing.getRoutes(a.at, b.at, { alternatives: MAX_ROUTES - 1, signal: c.signal });
     if (c.signal.aborted) return;
+    let usingSaved = false;
+    if (!res.ok && (res.error.kind === 'unavailable' || res.error.kind === 'timeout')) {
+      const last = await loadLast<Route>();
+      if (c.signal.aborted) return;
+      if (last && last.key === queryKey(a, b) && last.routes.length) {
+        res = { ok: true, value: last.routes };
+        usingSaved = true;
+      }
+    }
+    setOffline(usingSaved);
+    cache.allowStale(usingSaved);
     if (!res.ok) {
       batch(() => {
         setViews([]);
@@ -103,6 +164,7 @@ export function createAppStore(services: Services, opts: StoreOptions = {}) {
       return;
     }
 
+    if (!usingSaved) void saveLast({ key: queryKey(a, b), routes: res.value.slice(0, MAX_ROUTES), savedAtMs: clock() });
     const next: RouteView[] = res.value.slice(0, MAX_ROUTES).map((route, i) => ({
       letter: LETTERS[i] ?? String(i + 1),
       route,
@@ -114,7 +176,10 @@ export function createAppStore(services: Services, opts: StoreOptions = {}) {
       setUsedProvider(res.value[0]?.provider ?? null);
       setSelected((s) => (s && next.some((v) => v.letter === s) ? s : (next[0]?.letter ?? null)));
       setPhase('weather');
+      setWarnings([]);
     });
+    // Los avisos van en paralelo: no retrasan la previsión ni la bloquean si el Worker no responde.
+    void loadWarnings(next, c.signal);
 
     // Celdas únicas de todas las rutas: una sola tanda de peticiones (ARCHITECTURE §4.2).
     const cells = uniqueCells(next.flatMap((v) => v.samples.map((s) => s.at)));
@@ -144,10 +209,20 @@ export function createAppStore(services: Services, opts: StoreOptions = {}) {
     weatherVersion();
     const dep = departureMs();
     const now = nowMs();
-    return views().map((view) => ({
-      view,
-      ev: evaluateRoute({ samples: view.samples, weather, departureMs: dep, nowMs: now }),
-    }));
+    const ws = warnings();
+    return views().map((view) => {
+      const ev = evaluateRoute({ samples: view.samples, weather, departureMs: dep, nowMs: now });
+      return {
+        view,
+        ev,
+        alerts: ws.length
+          ? warningsOnRoute(
+              ev.points.map((p) => p.sample),
+              ws,
+            )
+          : [],
+      };
+    });
   });
 
   const ranked = createMemo(() =>
@@ -209,6 +284,8 @@ export function createAppStore(services: Services, opts: StoreOptions = {}) {
     routeError,
     weatherError,
     weatherPartial,
+    offline,
+    warningsStatus,
     usedProvider,
     // derivados
     evaluated,

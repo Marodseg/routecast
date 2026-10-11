@@ -21,6 +21,9 @@ export interface AlertsStripProps {
   warnings: StripWarning[];
   /** Algún proveedor de avisos falló: se indica sin ocultar lo que sí llegó. */
   partial?: boolean;
+  /** No se pudieron consultar (Worker caído o sin configurar): nunca se presenta como «sin avisos». */
+  unavailable?: boolean;
+  loading?: boolean;
 }
 
 const RANK: Record<WarningLevel, number> = { yellow: 1, orange: 2, red: 3 };
@@ -32,40 +35,50 @@ export function AlertsStrip(props: AlertsStripProps) {
 
   return (
     <Show
-      when={props.warnings.length}
+      when={!props.unavailable && !props.loading}
       fallback={
         <p class={s.none} role="status">
-          <Icon name="l0" size={14} /> {t().alerts.none}
-          <Show when={props.partial}> {t().alerts.partial}</Show>
+          <Icon name={props.loading ? 'clock' : 'warning'} size={14} />{' '}
+          {props.loading ? t().alerts.loading : t().alerts.unavailable}
         </p>
       }
     >
-      <details class={s.strip} data-level={top()}>
-        <summary class={s.summary}>
-          <span class={`${s.bar} risk-fill-${RANK[top() ?? 'yellow']}`} aria-hidden="true" />
-          <Icon name="warning" size={16} />
-          <span class={s.count}>{t().alerts.count(props.warnings.length)}</span>
-          <span class={`label ${s.title}`}>{t().alerts.title}</span>
-        </summary>
-        <ul class={s.list}>
-          <For each={sorted()}>
-            {(w) => (
-              <li class={s.item}>
-                <span class={`${s.swatch} risk-fill-${RANK[w.level]}`} aria-hidden="true" />
-                <span class={s.level}>{t().alerts.levels[w.level]}</span>
-                <span class={s.what}>
-                  <b>{w.phenomenon}</b> · {w.area}
-                </span>
-                <span class={`${s.when} mono`}>{t().alerts.window(w.from, w.to)}</span>
-                <span class={s.src}>{t().alerts.source(w.source)}</span>
-              </li>
-            )}
-          </For>
-        </ul>
-        <Show when={props.partial}>
-          <p class={s.partial}>{t().alerts.partial}</p>
-        </Show>
-      </details>
+      <Show
+        when={props.warnings.length}
+        fallback={
+          <p class={s.none} role="status">
+            <Icon name="l0" size={14} /> {t().alerts.none}
+            <Show when={props.partial}> {t().alerts.partial}</Show>
+          </p>
+        }
+      >
+        <details class={s.strip} data-level={top()}>
+          <summary class={s.summary}>
+            <span class={`${s.bar} risk-fill-${RANK[top() ?? 'yellow']}`} aria-hidden="true" />
+            <Icon name="warning" size={16} />
+            <span class={s.count}>{t().alerts.count(props.warnings.length)}</span>
+            <span class={`label ${s.title}`}>{t().alerts.title}</span>
+          </summary>
+          <ul class={s.list}>
+            <For each={sorted()}>
+              {(w) => (
+                <li class={s.item}>
+                  <span class={`${s.swatch} risk-fill-${RANK[w.level]}`} aria-hidden="true" />
+                  <span class={s.level}>{t().alerts.levels[w.level]}</span>
+                  <span class={s.what}>
+                    <b>{w.phenomenon}</b> · {w.area}
+                  </span>
+                  <span class={`${s.when} mono`}>{t().alerts.window(w.from, w.to)}</span>
+                  <span class={s.src}>{t().alerts.source(w.source)}</span>
+                </li>
+              )}
+            </For>
+          </ul>
+          <Show when={props.partial}>
+            <p class={s.partial}>{t().alerts.partial}</p>
+          </Show>
+        </details>
+      </Show>
     </Show>
   );
 }

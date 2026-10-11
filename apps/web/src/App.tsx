@@ -10,6 +10,7 @@ import { t } from './i18n';
 import { effectiveTheme } from './lib/theme';
 import { MapPlaceholder } from './map/MapPlaceholder';
 import { RouteMap } from './map/RouteMap';
+import { AlertsStrip, type StripWarning } from './ui/AlertsStrip/AlertsStrip';
 import { BottomSheet, type Snap } from './ui/BottomSheet/BottomSheet';
 import { CommandSearch } from './ui/CommandSearch/CommandSearch';
 import { DeparturePicker } from './ui/DeparturePicker/DeparturePicker';
@@ -110,7 +111,7 @@ export function App(props: { services?: Services }) {
 
   // --- Vistas derivadas ---
   const compare = createMemo<CompareRoute[]>(() =>
-    store.ranked().map(({ view, ev }) => {
+    store.ranked().map(({ view, ev, alerts }) => {
       const worst = ev.risk.worstPoint === null ? undefined : ev.points[ev.risk.worstPoint];
       const level = ev.risk.worstLevel;
       return {
@@ -123,6 +124,7 @@ export function App(props: { services?: Services }) {
         worst: level,
         kmHigh: Math.round(ev.risk.kmAtLevel2Plus),
         profile: ev.risk.segments,
+        alerts: alerts.length,
         ...(worst && level !== 'unknown' && level > 0
           ? {
               worstText: `${t().explain.at(localHHMM(worst.sample.etaMs), Math.round(worst.sample.kmFromStart))} · ${explainFactor(worst, t())}`,
@@ -164,6 +166,18 @@ export function App(props: { services?: Services }) {
       lvl === 'unknown' ? t().risk.unknown : (t().risk.levels[lvl] ?? ''),
     );
   };
+
+  const stripWarnings = createMemo<StripWarning[]>(() =>
+    (store.selectedEval()?.alerts ?? []).map((h) => ({
+      id: h.warning.id,
+      level: h.warning.level,
+      phenomenon: t().alerts.kinds[h.warning.kind],
+      area: `${h.warning.areaName} · ${t().alerts.stretch(Math.round(h.fromKm), Math.round(h.toKm), localHHMM(h.firstEtaMs))}`,
+      from: localHHMM(h.warning.fromMs),
+      to: localHHMM(h.warning.toMs),
+      source: h.warning.source,
+    })),
+  );
 
   const lowConfidence = () => store.selectedEval()?.ev.points.some((p) => p.confidence === 'low') ?? false;
   const partial = () => {
@@ -234,6 +248,11 @@ export function App(props: { services?: Services }) {
             {store.weatherError()?.kind === 'rate_limited' ? t().status.rateLimited : t().status.weatherDown}
           </p>
         </Show>
+        <Show when={store.offline()}>
+          <p class={s.warn}>
+            <Icon name="offline" size={14} /> {t().empty.offlineBody}
+          </p>
+        </Show>
         <Show when={store.weatherPartial()}>
           <p class={s.warn}>
             <Icon name="warning" size={14} /> {t().status.weatherPartial}
@@ -271,6 +290,14 @@ export function App(props: { services?: Services }) {
           <EmptyState icon="route" title={t().empty.startTitle} body={t().empty.startBody} />
         </Match>
         <Match when={store.views().length}>
+          <Show when={store.warningsStatus() !== 'idle'}>
+            <AlertsStrip
+              warnings={stripWarnings()}
+              partial={store.warningsStatus() === 'partial'}
+              unavailable={store.warningsStatus() === 'down' || store.warningsStatus() === 'off'}
+              loading={store.warningsStatus() === 'loading'}
+            />
+          </Show>
           <RouteCompare
             routes={compare()}
             selected={store.selected() ?? undefined}

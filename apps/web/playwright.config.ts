@@ -16,6 +16,8 @@ export default defineConfig({
     baseURL: `http://localhost:${PORT}`,
     trace: 'on-first-retry',
     locale: 'es-ES',
+    // El service worker solo se activa en el test de PWA (interferiría con la red simulada).
+    serviceWorkers: 'block',
     timezoneId: 'Europe/Madrid',
   },
   projects: [
@@ -27,5 +29,7 @@ export default defineConfig({
     port: PORT,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
+    // Worker simulado en los E2E (las peticiones se interceptan en e2e/mocks.ts).
+    env: { VITE_API_BASE: 'https://api.routecast.test' },
   },
 });

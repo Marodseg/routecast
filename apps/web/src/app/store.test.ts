@@ -21,6 +21,7 @@ function services(getRoutes: AppServices['routing']['getRoutes']): AppServices {
     geocoding: { id: 'g', suggest: async () => ({ ok: true, value: [] }) },
     providerLabel: (id) => id,
     isFallback: () => false,
+    warnings: null,
   };
 }
 

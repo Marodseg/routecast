@@ -8,11 +8,19 @@ const fixture = (name: string): unknown =>
 export const NOW = Date.UTC(2026, 9, 10, 14, 40);
 const H = 3_600_000;
 
+const ZONES = JSON.parse(
+  readFileSync(new URL('../../../packages/providers/src/data/aemet-zones.json', import.meta.url), 'utf8'),
+) as { code: string; polygons: [number, number][][] }[];
+/** Polígono real de la zona AEMET «Antequera» (612901), por la que pasa la ruta A-45 · A-92. */
+const ANTEQUERA = ZONES.find((z) => z.code === '612901')?.polygons ?? [];
+
 export interface MockOptions {
   routing?: 'ok' | 'down';
   weather?: 'ok' | 'down' | 'rate_limited';
   /** Ventana UTC con rachas fuertes del oeste en el entorno de Antequera (ruta A). */
   gustWindow?: [number, number];
+  /** Worker de avisos: ok (aviso naranja de viento en Antequera), down (503). */
+  warnings?: 'ok' | 'down';
 }
 
 export interface NetLog {
@@ -105,6 +113,26 @@ export async function mockNetwork(page: Page, o: MockOptions = {}): Promise<NetL
         });
       }
       return json(route, openMeteo(url, gustWindow));
+    }
+    if (url.host === 'api.routecast.test' && url.pathname === '/api/warnings') {
+      if (o.warnings === 'down') return json(route, { error: 'unavailable' }, 503);
+      return json(route, {
+        partial: false,
+        warnings: [
+          {
+            id: 'aemet:test:612901',
+            level: 'orange',
+            kind: 'wind',
+            areaName: 'Antequera',
+            zoneCode: '612901',
+            polygons: ANTEQUERA,
+            fromMs: NOW - H,
+            toMs: NOW + 4 * H,
+            description: 'Rachas máximas: 80 km/h.',
+            source: 'AEMET',
+          },
+        ],
+      });
     }
     // Mapa base fuera de los tests: la app debe seguir funcionando sin él.
     return route.fulfill({ status: 503, body: '' });

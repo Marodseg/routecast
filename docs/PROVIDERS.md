@@ -69,15 +69,43 @@ Contexto de uso: proyecto personal/portfolio **sin monetización**. Si eso cambi
 - Plan gratuito estándar: Directions 2.000/día y 40/min (página oficial de planes). Otras fuentes secundarias hablan de >8.000/día en total entre endpoints; **vale la cifra oficial**.
 - No comercial. Requiere clave (secreto del Worker). Alternativas de ruta: parámetro `alternative_routes`; límites de distancia/longitud en la API pública **[VERIFICAR]**.
 - Fuente: https://openrouteservice.org/plans/
+- **Verificado 2026-10-11** (petición real, Málaga → Granada): `POST /v2/directions/driving-car/geojson` con
+  `Authorization: <clave>` y `alternative_routes: { target_count: 3, weight_factor: 1.6, share_factor: 0.6 }` devolvió
+  **3 rutas** (126, 148 y 148 km). Cabeceras observadas: `x-ratelimit-limit: 200`, `x-ratelimit-remaining`,
+  `x-ratelimit-reset` (unix). Los tiempos por paso (`steps[].duration` con `way_points`) permiten la ETA por vértice.
+  Los nombres de vía de autovías llegan a menudo como `-`. Códigos de error 2009 (sin ruta) / 2010 (punto fuera de la red)
+  según la documentación de errores de ORS **[VERIFICAR con una respuesta real]**.
+- Desde esta red de desarrollo hubo timeouts de conexión intermitentes a `api.openrouteservice.org` (2026-10-11).
 
 ### AEMET OpenData
 - Clave gratuita en https://opendata.aemet.es/centrodedescargas/altaUsuario. **Solo en servidor.**
 - Patrón de dos pasos: la primera respuesta contiene una URL (`datos`) con los datos reales; hay que pedirla. Reintentos con backoff ante 429; se han observado cortes/caídas sostenidas.
 - Avisos por comunidad autónoma y predicción por municipio (códigos INE). Citar a AEMET como origen.
+- **Avisos CAP (verificado 2026-10-11)**: `GET /opendata/api/avisos_cap/ultimoelaborado/area/{area}` con cabecera
+  `api_key`. Códigos de área (especificación oficial): `esp` España, 61 Andalucía, 62 Aragón, 63 Asturias,
+  64 Baleares, 65 Canarias, 66 Cantabria, 67 Castilla y León, 68 Castilla-La Mancha, 69 Cataluña, 70 Extremadura,
+  71 Galicia, 72 Madrid, 73 Murcia, 74 Navarra, 75 País Vasco, 76 La Rioja, 77 C. Valenciana, 78 Ceuta, 79 Melilla.
+  - Paso 1: JSON `{ descripcion, estado, datos, metadatos }` (Content-Type declara ISO-8859-15; el JSON es ASCII).
+    Los errores también llegan con HTTP 200 y `estado` 4xx/5xx en el cuerpo.
+  - Paso 2: `datos` (en `opendata.aemet.es`) devuelve `application/x-gtar` con un XML CAP 1.2 **en UTF-8** por
+    fenómeno: AT temp. máximas, BT mínimas, CO costeros, NE nevadas, NI nieblas, PR lluvias, TO tormentas, VI vientos,
+    VS polvo. Cada fichero lleva un `<info>` por idioma (es-ES, en-GB) y **todas** las zonas, también las de nivel
+    «verde» (sin aviso). Nivel en `AEMET-Meteoalerta nivel` (verde/amarillo/naranja/rojo), zona en
+    `AEMET-Meteoalerta zona` y polígono `lat,lon` en `<polygon>`. Andalucía ≈ 430 KB, Baleares ≈ 120 KB.
+  - El proyecto genera una tabla estática de 233 zonas con `packages/providers/scripts/build-aemet-zones.mjs`.
+  - Fuente: https://opendata.aemet.es/AEMET_OpenData_specification.json
 - Fuentes: https://wetterdienst.readthedocs.io/en/latest/data/provider/aemet/observation/index.html · https://glama.ai/mcp/servers/rldona/aemet-mcp
 
 ### Meteoalarm
 - Portal de API: https://api.meteoalarm.org/ (EDR GeoJSON, MQTT, REST, feeds Atom por país y Europa). Detalle de autenticación y límites **[VERIFICAR]**.
+- **Verificado 2026-10-11**: `https://feeds.meteoalarm.org/feeds/meteoalarm-legacy-atom-spain` (Atom, sin clave, ~7 KB,
+  solo avisos vigentes) con `cap:areaDesc`, `cap:geocode` (EMMA_ID), `cap:severity` (Moderate/Severe/Extreme =
+  amarillo/naranja/rojo), `cap:onset`/`cap:expires` y título «Yellow Rain Warning issued for Spain - …». **Sin
+  polígonos**: el proyecto los obtiene de la tabla de zonas de AEMET por nombre (Meteoalarm reproduce los avisos de AEMET).
+  El JSON `/api/v1/warnings/feeds-spain` pesa ~1,9 MB e incluye avisos caducados: no se usa (CPU del Worker).
+- Licencia en el propio feed: «Licensed under terms equivalent to CC BY 4.0, with additional requirements for
+  redistributing outlined in our Terms and Conditions». Los términos (https://meteoalarm.org/en/live/page/terms-and-conditions)
+  no se pudieron leer de forma automática (página renderizada con JS) **[VERIFICAR a mano]** los requisitos de redistribución.
 - Uso previsto: complemento a AEMET y base para extender a Europa.
 
 ### MET Norway

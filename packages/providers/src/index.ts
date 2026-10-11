@@ -10,6 +10,13 @@ export { routeName } from './route-utils';
 export { cumulativeFromManeuvers, ValhallaRouting } from './valhalla';
 export { fetchAemetArea, fetchMeteoalarmSpain } from './warnings';
 export {
+  WarningsResponse,
+  type WorkerClientOptions,
+  WorkerRoutesResponse,
+  WorkerRouting,
+  WorkerWarnings,
+} from './worker-client';
+export {
   AEMET_ZONES,
   type AemetZone,
   areasForBBox,
