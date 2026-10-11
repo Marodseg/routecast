@@ -106,6 +106,46 @@
   display: none;
 }
 
+/* Previsión en curso: progreso real (celdas resueltas), no un spinner. */
+.progress {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-1) var(--space-2);
+  align-items: baseline;
+  color: var(--ink);
+}
+
+.bar {
+  grid-column: 1 / -1;
+  display: block;
+  height: 3px;
+  overflow: hidden;
+  background: var(--surface-sunken);
+}
+
+.bar > span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transform-origin: left;
+  transition: transform var(--duration) var(--ease-out);
+}
+
+.indeterminate > span {
+  width: 30%;
+  transform: none !important;
+  animation: indeterminate 1.2s var(--ease-in-out) infinite;
+}
+
+@keyframes indeterminate {
+  from {
+    translate: -100% 0;
+  }
+  to {
+    translate: 340% 0;
+  }
+}
+
 .warn,
 .note {
   display: flex;

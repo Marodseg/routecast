@@ -120,6 +120,52 @@
   display: block;
   margin-top: 4px;
 }
+
+/* Mientras llega la previsión: nada de «Sin datos» falsos; la tira barre la ruta. */
+.pending {
+  font: 500 var(--text-sm) / 1.2 var(--font-mono);
+  color: var(--ink-muted);
+}
+
+.selected .pending {
+  color: color-mix(in oklch, var(--surface) 75%, transparent);
+}
+
+.scan {
+  display: block;
+  height: 10px;
+  background:
+    linear-gradient(90deg, transparent, color-mix(in oklch, var(--accent) 55%, transparent), transparent) -70% 0 / 40%
+    100% no-repeat,
+    var(--surface-sunken);
+  animation: scan 1.3s var(--ease-in-out) infinite;
+}
+
+@keyframes scan {
+  to {
+    background-position:
+      170% 0,
+      0 0;
+  }
+}
+
+/* Al llegar la previsión, el riesgo aparece (no salta). */
+.reveal {
+  display: block;
+  animation: reveal var(--duration-slow) var(--ease-out) both;
+  animation-delay: calc(var(--i) * var(--stagger));
+}
+
+.risk.reveal {
+  display: flex;
+}
+
+@keyframes reveal {
+  from {
+    opacity: 0;
+    filter: blur(2px);
+  }
+}
 .worst {
   grid-column: 1 / -1;
   font: 400 var(--text-sm) / 1.4 var(--font-mono);

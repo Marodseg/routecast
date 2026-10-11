@@ -97,7 +97,7 @@ export class OpenMeteoWeather implements WeatherProvider {
 
   async getHourly(
     cells: readonly WeatherCell[],
-    opts: { signal: AbortSignal; forecastDays?: number },
+    opts: { signal: AbortSignal; forecastDays?: number; onProgress?: (done: number, total: number) => void },
   ): Promise<Result<HourlyWeather[]>> {
     const clock = this.#o.clock ?? realClock;
     const batches: WeatherCell[][] = [];
@@ -106,11 +106,15 @@ export class OpenMeteoWeather implements WeatherProvider {
     const results: Result<HourlyWeather[]>[] = [];
     // Varios lotes a la vez (la latencia crece con las ubicaciones de cada petición), escalonados al empezar.
     let next = 0;
+    let done = 0;
     const worker = async (w: number) => {
       if (w > 0) await clock.sleep(w * (this.#o.batchGapMs ?? 250), opts.signal);
       while (next < batches.length && !opts.signal.aborted) {
         const i = next++;
-        results[i] = await this.#batch(batches[i] as WeatherCell[], opts, clock);
+        const batch = batches[i] as WeatherCell[];
+        results[i] = await this.#batch(batch, opts, clock);
+        done += batch.length;
+        if (!opts.signal.aborted) opts.onProgress?.(done, cells.length);
       }
     };
     await Promise.all(Array.from({ length: Math.min(MAX_PARALLEL, batches.length) }, (_, w) => worker(w)));

@@ -195,8 +195,9 @@ export function App(props: { services?: Services }) {
 
   const lowConfidence = () => store.selectedEval()?.ev.points.some((p) => p.confidence === 'low') ?? false;
   const partial = () => {
+    // Mientras llega la previsión todo está «sin datos»: no es un hueco real, es que aún no ha llegado.
     const e = store.selectedEval();
-    return e ? partialNote(e.ev.points, t()) : null;
+    return e && store.phase() === 'ready' ? partialNote(e.ev.points, t()) : null;
   };
 
   const panel = () => (
@@ -254,7 +255,33 @@ export function App(props: { services?: Services }) {
       <div class={s.status} role="status" aria-live="polite">
         <Switch>
           <Match when={store.phase() === 'routing'}>{t().status.routing}</Match>
-          <Match when={store.phase() === 'weather'}>{t().status.weather}</Match>
+          <Match when={store.phase() === 'weather'}>
+            <div class={s.progress}>
+              <span>{t().status.weather}</span>
+              <Show when={store.weatherProgress()}>
+                {(p) => (
+                  <span class="mono" aria-hidden="true">
+                    {t().status.points(p().done, p().total)}
+                  </span>
+                )}
+              </Show>
+              <span
+                class={s.bar}
+                classList={{ [s.indeterminate ?? '']: !store.weatherProgress() }}
+                role="progressbar"
+                aria-label={t().status.weather}
+                aria-valuemin={0}
+                aria-valuemax={store.weatherProgress()?.total}
+                aria-valuenow={store.weatherProgress()?.done}
+              >
+                <span
+                  style={{
+                    transform: `scaleX(${(store.weatherProgress()?.done ?? 0) / Math.max(1, store.weatherProgress()?.total ?? 1)})`,
+                  }}
+                />
+              </span>
+            </div>
+          </Match>
         </Switch>
         <Show when={store.weatherError()}>
           <p class={s.warn}>
@@ -356,7 +383,7 @@ export function App(props: { services?: Services }) {
             )}
           </Show>
 
-          <Show when={store.selectedEval()}>
+          <Show when={store.phase() !== 'weather' && store.selectedEval()}>
             {(e) => (
               <RiskProfile
                 segments={e().ev.risk.segments}

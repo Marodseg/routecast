@@ -60,6 +60,7 @@ export const es = {
     high: 'Km riesgo',
     arrival: (t: string) => `llegada ${t}`,
     noRisk: 'Sin tramos con riesgo a esta hora',
+    pending: 'Calculando…',
     kmHigh: (km: number) => `${km} km en riesgo alto o severo`,
   },
   profile: {
@@ -150,6 +151,7 @@ export const es = {
     weatherPartial: 'Falta la previsión de algunos tramos: se muestran sin riesgo calculado.',
     routing: 'Buscando rutas…',
     weather: 'Consultando la previsión en cada tramo…',
+    points: (done: number, total: number) => `${done} de ${total} puntos`,
     noRoute: 'No hay ruta en coche entre esos puntos.',
     routingDown: 'Los servidores de rutas no responden. Inténtalo de nuevo en un momento.',
     weatherDown: 'Sin previsión meteorológica ahora mismo: mostramos las rutas sin riesgo calculado.',

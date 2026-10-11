@@ -65,6 +65,8 @@ export function createAppStore(services: Services, opts: StoreOptions = {}) {
   /** Hay celdas sin previsión (lote fallido): esos tramos salen sin riesgo calculado. */
   const [weatherPartial, setWeatherPartial] = createSignal(false);
   const [weatherVersion, setWeatherVersion] = createSignal(0);
+  /** Celdas con previsión ya resuelta durante la fase 'weather' (caché incluida); null fuera de ella. */
+  const [weatherProgress, setWeatherProgress] = createSignal<{ done: number; total: number } | null>(null);
   const [usedProvider, setUsedProvider] = createSignal<string | null>(null);
   /** Se muestran rutas guardadas porque no hay conexión. */
   const [offline, setOffline] = createSignal(false);
@@ -149,6 +151,7 @@ export function createAppStore(services: Services, opts: StoreOptions = {}) {
     batch(() => {
       setViews([]);
       setPhase('routing');
+      setWeatherProgress(null);
       setRouteError(null);
       setWeatherError(null);
       setWeatherPartial(false);
@@ -203,8 +206,15 @@ export function createAppStore(services: Services, opts: StoreOptions = {}) {
     if (c.signal.aborted) return;
     for (const [k, h] of cached) weather.set(k, h);
     const missing = cells.filter((x) => !cached.has(x.key));
+    setWeatherProgress({ done: cached.size, total: cells.length });
     if (missing.length) {
-      const w = await services.weather.getHourly(missing, { signal: c.signal, forecastDays: 3 });
+      const w = await services.weather.getHourly(missing, {
+        signal: c.signal,
+        forecastDays: 3,
+        onProgress: (done) => {
+          if (!c.signal.aborted) setWeatherProgress({ done: cached.size + done, total: cells.length });
+        },
+      });
       if (c.signal.aborted) return;
       if (w.ok) {
         for (const h of w.value) weather.set(h.cell, h);
@@ -216,6 +226,7 @@ export function createAppStore(services: Services, opts: StoreOptions = {}) {
     }
     batch(() => {
       setWeatherVersion((n) => n + 1);
+      setWeatherProgress(null);
       setPhase('ready');
     });
   }
@@ -297,6 +308,7 @@ export function createAppStore(services: Services, opts: StoreOptions = {}) {
     views,
     selected,
     phase,
+    weatherProgress,
     routeError,
     weatherError,
     weatherPartial,

@@ -61,39 +61,57 @@ export function RouteCompare(props: RouteCompareProps) {
                   <span class={s.roads}>{r.name}</span>
                 </span>
                 <span class={s.num}>{duration(r.durationMin)}</span>
-                <span class={s.risk}>
-                  <RiskChip level={r.worst} short noIcon />
-                  <Show when={r.cause}>
-                    {(c) => (
-                      <span class={s.cause}>
-                        <Icon name={c().factor} size={13} />
-                        {c().label}
+                <Show
+                  when={!props.loading}
+                  fallback={
+                    <>
+                      <span class={[s.risk, s.pending].join(' ')}>{t().compare.pending}</span>
+                      <span class={[s.num, s.pending].join(' ')} aria-hidden="true">
+                        —
                       </span>
-                    )}
-                  </Show>
-                </span>
-                <span class={s.num}>
-                  <Odometer value={String(r.kmHigh)} />
-                  <small> {t().units.km}</small>
-                  <span class="visually-hidden">{t().compare.kmHigh(r.kmHigh)}</span>
-                </span>
+                    </>
+                  }
+                >
+                  <span class={[s.risk, s.reveal].join(' ')}>
+                    <RiskChip level={r.worst} short noIcon />
+                    <Show when={r.cause}>
+                      {(c) => (
+                        <span class={s.cause}>
+                          <Icon name={c().factor} size={13} />
+                          {c().label}
+                        </span>
+                      )}
+                    </Show>
+                  </span>
+                  <span class={[s.num, s.reveal].join(' ')}>
+                    <Odometer value={String(r.kmHigh)} />
+                    <small> {t().units.km}</small>
+                    <span class="visually-hidden">{t().compare.kmHigh(r.kmHigh)}</span>
+                  </span>
+                </Show>
                 <span class={s.sub}>
                   {r.via} · {r.distanceKm} {t().units.km} · {t().compare.arrival('')}
                   <Odometer value={r.arrival} />
                 </span>
                 <span class={s.profile}>
-                  <RiskProfile segments={r.profile} totalKm={r.distanceKm} routeId={r.id} variant="mini" />
+                  <Show when={!props.loading} fallback={<span class={s.scan} aria-hidden="true" />}>
+                    <span class={s.reveal}>
+                      <RiskProfile segments={r.profile} totalKm={r.distanceKm} routeId={r.id} variant="mini" />
+                    </span>
+                  </Show>
                 </span>
                 <Show when={r.alerts}>
                   <span class={s.alerts}>
                     <Icon name="warning" size={14} /> {t().alerts.onRoute(r.alerts ?? 0)}
                   </span>
                 </Show>
-                <span class={s.worst}>
-                  <Show when={r.worstText} fallback={t().compare.noRisk}>
-                    {r.worstText}
-                  </Show>
-                </span>
+                <Show when={!props.loading}>
+                  <span class={[s.worst, s.reveal].join(' ')}>
+                    <Show when={r.worstText} fallback={t().compare.noRisk}>
+                      {r.worstText}
+                    </Show>
+                  </span>
+                </Show>
               </button>
             </li>
           )}

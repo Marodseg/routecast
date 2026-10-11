@@ -61,6 +61,7 @@ export const en: Dict = {
     high: 'Km at risk',
     arrival: (t) => `arrive ${t}`,
     noRisk: 'No risky stretches at this time',
+    pending: 'Calculating…',
     kmHigh: (km) => `${km} km at high or severe risk`,
   },
   profile: {
@@ -151,6 +152,7 @@ export const en: Dict = {
     weatherPartial: 'Forecast missing for some stretches: they are shown without risk.',
     routing: 'Finding routes…',
     weather: 'Getting the forecast for each stretch…',
+    points: (done, total) => `${done} of ${total} points`,
     noRoute: 'There is no driving route between those points.',
     routingDown: 'Routing servers are not responding. Try again in a moment.',
     weatherDown: 'No weather forecast right now: routes are shown without risk.',

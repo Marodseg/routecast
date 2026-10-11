@@ -112,6 +112,28 @@ describe('OpenMeteoWeather (fixtures reales)', () => {
     expect(r.ok).toBe(false);
   });
 
+  it('informa del avance por celdas resueltas, también de los lotes fallidos', async () => {
+    const single = fixture('open-meteo-single.json');
+    let requests = 0;
+    server.use(
+      http.get(OM, ({ request }) => {
+        requests++;
+        if (requests === 2) return new HttpResponse(null, { status: 503 });
+        const n = new URL(request.url).searchParams.get('latitude')?.split(',').length ?? 0;
+        return HttpResponse.json(n === 1 ? single : Array.from({ length: n }, () => single));
+      }),
+    );
+    const many = Array.from({ length: 45 }, (_, i) => ({ key: 'k' + i, at: { lat: 37 + i * 0.1, lng: -4 } }));
+    const seen: [number, number][] = [];
+    await new OpenMeteoWeather({ clock: fakeClock() }).getHourly(many, {
+      signal: signal(),
+      onProgress: (d, total) => seen.push([d, total]),
+    });
+    expect(seen).toHaveLength(3);
+    expect(seen.at(-1)).toEqual([45, 45]);
+    expect(seen.every(([d], i) => i === 0 || d > (seen[i - 1]?.[0] ?? 0))).toBe(true);
+  });
+
   it('cancelado a mitad: aborted', async () => {
     const ctrl = new AbortController();
     server.use(

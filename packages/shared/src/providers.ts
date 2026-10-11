@@ -32,7 +32,12 @@ export interface WeatherProvider {
   readonly id: string;
   getHourly(
     cells: readonly WeatherCell[],
-    opts: { signal: AbortSignal; forecastDays?: number },
+    opts: {
+      signal: AbortSignal;
+      forecastDays?: number;
+      /** Avance para la UI: celdas resueltas (con o sin éxito) de `total`. */
+      onProgress?: (done: number, total: number) => void;
+    },
   ): Promise<Result<HourlyWeather[]>>;
 }
 

@@ -31,6 +31,17 @@ const routes: CompareRoute[] = [
 ];
 
 describe('RouteCompare', () => {
+  it('mientras carga la previsión no muestra niveles ni «Sin datos»: indica que se está calculando', () => {
+    setLang('es');
+    render(() => <RouteCompare routes={routes} selected="A" loading />);
+    const rows = screen.getAllByRole('button');
+    for (const row of rows) {
+      expect(row.textContent).toContain('Calculando…');
+      expect(row.textContent).not.toMatch(/Sin datos|Severo|Precaución|Sin tramos con riesgo/);
+    }
+    expect(document.querySelector('section')?.getAttribute('aria-busy')).toBe('true');
+  });
+
   it('dice qué es el peligro junto al nivel («Severo · Viento lateral»)', () => {
     setLang('es');
     render(() => <RouteCompare routes={routes} selected="A" />);
