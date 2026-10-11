@@ -149,6 +149,38 @@ describe('PhotonGeocoding (fixture real)', () => {
     expect(r.ok && r.value[0]?.name).toBe('Granada');
   });
 
+  it('sin números busca lugares (capas y caja de Europa) y descarta POIs; con números admite direcciones', async () => {
+    const urls: URL[] = [];
+    const poi = {
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [-3.8, 40.3] },
+      properties: { name: 'Granada - Maestros', osm_key: 'highway', osm_value: 'bus_stop' },
+    };
+    const village = {
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [-5.9, 40.9] },
+      properties: { name: 'Granada', osm_key: 'place', osm_value: 'locality', state: 'Castilla y León' },
+    };
+    const city = {
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [-3.6, 37.17] },
+      properties: { name: 'Granada', osm_key: 'place', osm_value: 'city', state: 'Andalucía' },
+    };
+    server.use(
+      http.get(PH, ({ request }) => {
+        urls.push(new URL(request.url));
+        return HttpResponse.json({ features: [poi, village, city] });
+      }),
+    );
+    const r = await new PhotonGeocoding().suggest('Granada', { signal: signal() });
+    expect(urls[0]?.searchParams.getAll('layer')).toContain('city');
+    expect(urls[0]?.searchParams.get('bbox')).toBe('-25,27,45,72');
+    expect(r.ok && r.value.map((p) => p.detail)).toEqual(['Andalucía', 'Castilla y León']);
+    const addr = await new PhotonGeocoding().suggest('Calle Granada 5', { signal: signal() });
+    expect(urls[1]?.searchParams.getAll('layer')).toEqual([]);
+    expect(addr.ok && addr.value).toHaveLength(3);
+  });
+
   it('consultas de menos de 2 caracteres no llegan a la red', async () => {
     expect(await new PhotonGeocoding().suggest(' g ', { signal: signal() })).toEqual({ ok: true, value: [] });
   });

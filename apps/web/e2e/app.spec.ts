@@ -18,7 +18,7 @@ test('flujo completo: origen → destino → rutas con riesgo → cambiar hora s
   // A las 16:40 la ruta A (Antequera) tiene rachas cruzadas: la costa (B) va primero.
   await expect(compareRows(page).first()).toContainText('A-7 · A-44');
   await expect(page.getByText(/Racha cruzada de \d+ km\/h/).first()).toBeVisible();
-  await expect(page).toHaveURL(/from=36\.72.*M%C3%A1laga.*to=37\.1/);
+  await expect(page).toHaveURL(/from=36\.7\d*.*M%C3%A1laga.*to=37\.1/);
 
   const before = net.external.length;
   const dial = page.getByRole('slider', { name: 'Hora de salida' });

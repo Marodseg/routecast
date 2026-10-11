@@ -139,9 +139,17 @@ Contexto de uso: proyecto personal/portfolio **sin monetización**. Si eso cambi
 
 ### Geocodificación
 - **Photon** (`https://photon.komoot.io/api/?q=…`) para autocompletar (debounce ≥ 300 ms, caché, cancelar peticiones obsoletas).
+- Photon (revisado 2026-10-11): `lang=es` devuelve 400 («Supported are: default, de, en, fr»), así que no conoce
+  exónimos en castellano; por eso el buscador usa primero un nomenclátor propio de Wikidata (ADR-0010). Se envían `bbox`
+  de Europa, `location_bias_scale=0.1` y `layer` de lugares cuando la consulta no tiene números.
 - Photon `lang`: admite un solo código; si se omite usa `Accept-Language` del navegador. `default` no está documentado, así que no se envía (revisado 2026-10-10, https://github.com/komoot/photon/blob/master/docs/api-v1.md). Sin cifras de límite: «uso razonable», puede limitarse sin aviso.
 - **Nominatim** solo para búsquedas explícitas puntuales, nunca autocompletado; 1 req/s; User-Agent propio.
 - Fuentes: https://operations.osmfoundation.org/policies/nominatim/ · https://photon.komoot.io
+
+### Wikidata (nomenclátor, ADR-0010)
+- SPARQL `https://query.wikidata.org/sparql` solo desde el script manual `apps/web/scripts/build-gazetteer.mjs` (3 consultas,
+  User-Agent identificable, reintentos ante 429/504). Datos CC0: no exige atribución; se cita igualmente en la web.
+- Fuente: https://www.wikidata.org/wiki/Wikidata:Licensing
 
 ### OpenFreeMap
 - Estilos en `https://tiles.openfreemap.org/styles/{liberty|bright|positron}`; recolorear a la paleta del proyecto (ver `DESIGN.md`). Atribución OSM/OpenMapTiles. Fuente: https://openfreemap.org

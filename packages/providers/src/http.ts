@@ -111,7 +111,10 @@ export async function getBytes(url: string, o: GetBytesOptions): Promise<Result<
       return err(retryAfterS === undefined ? { kind: 'rate_limited' } : { kind: 'rate_limited', retryAfterS });
     }
     if (res.status >= 500) return err({ kind: 'unavailable', status: res.status });
-    if (res.status >= 400) return err({ kind: 'bad_response', detail: `HTTP ${res.status}` });
+    // Con redirect: 'manual' una redirección llega como 3xx (u opaca, status 0): no se sigue.
+    if (res.status >= 300 || res.status === 0) {
+      return err({ kind: 'bad_response', detail: `HTTP ${res.status}` });
+    }
     const max = o.maxBytes ?? Number.POSITIVE_INFINITY;
     const declared = Number(res.headers.get('content-length'));
     const tooBig = (n: number): Result<never> =>

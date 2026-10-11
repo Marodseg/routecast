@@ -57,8 +57,9 @@ export async function fetchAemetArea(area: string, o: AemetOptions, signal: Abor
     signal,
     timeoutMs: o.timeoutMs ?? 10_000,
     maxBytes: 5_000_000,
-    // Sin redirecciones: la URL ya se ha comprobado y no debe poder llevar a otro sitio.
-    init: { redirect: 'error', ...(o.userAgent ? { headers: { 'User-Agent': o.userAgent } } : {}) },
+    // Sin seguir redirecciones (la URL ya se ha comprobado). «manual» y no «error»: Workers no admite «error».
+    // Una respuesta 3xx se rechaza en getBytes.
+    init: { redirect: 'manual', ...(o.userAgent ? { headers: { 'User-Agent': o.userAgent } } : {}) },
     ...(o.fetchImpl ? { fetchImpl: o.fetchImpl } : {}),
   });
   if (!tar.ok) return tar;

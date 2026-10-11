@@ -1,0 +1,3 @@
+# Copia como .dev.vars (ignorado por git) para `wrangler dev`. En producción: `wrangler secret put <NOMBRE>`.
+AEMET_API_KEY=pon-aqui-tu-clave-de-aemet-opendata
+ORS_API_KEY=pon-aqui-tu-clave-de-openrouteservice

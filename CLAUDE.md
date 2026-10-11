@@ -59,6 +59,16 @@ pnpm size           # size-limit sobre apps/web/dist (requiere build)
 pnpm --filter @routecast/web exec playwright install chromium   # primera vez
 ```
 
+Scripts manuales (con red, ejecutar con moderación):
+- `node packages/providers/scripts/record-fixtures.mjs` — regraba fixtures de proveedores.
+- `node packages/providers/scripts/build-aemet-zones.mjs` — tabla de zonas AEMET (necesita `apps/worker/.dev.vars`).
+- `pnpm --filter @routecast/web exec node scripts/build-gazetteer.mjs` — nomenclátor desde Wikidata (ADR-0010).
+- `pnpm --filter @routecast/web exec node scripts/build-pwa-assets.mjs` — manifest e iconos desde los tokens.
+
+Entorno local: `apps/worker/.dev.vars` (claves, ignorado por git; plantilla en `dev.vars.example`). La web usa el Worker
+local (:8787) en desarrollo; `VITE_API_BASE` lo cambia (ver `apps/web/.env.example`). Worker desplegado:
+https://routecast-api.marodseg.workers.dev
+
 Galería de componentes: `pnpm dev` → http://localhost:5173/dev/gallery/ (también se publica en Pages).
 Capturas de regresión: `apps/web/e2e/__screenshots__/{plataforma}/`; tras un cambio visual intencionado,
 `pnpm --filter @routecast/web exec playwright test --update-snapshots -g visual`.

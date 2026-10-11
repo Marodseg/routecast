@@ -96,6 +96,14 @@ describe('getJson', () => {
     expect(okRes.ok && okRes.value.byteLength).toBe(2000);
   });
 
+  it('getBytes no sigue redirecciones con redirect: manual', async () => {
+    server.use(
+      http.get(URL_, () => new HttpResponse(null, { status: 302, headers: { Location: 'https://evil.example/' } })),
+    );
+    const r = await getBytes(URL_, { signal: signal(), init: { redirect: 'manual' } });
+    expect(r.ok === false && r.error.kind).toBe('bad_response');
+  });
+
   it('error de red → unavailable', async () => {
     server.use(http.get(URL_, () => HttpResponse.error()));
     expect(await getJson(URL_, { schema, signal: signal() })).toEqual({ ok: false, error: { kind: 'unavailable' } });
