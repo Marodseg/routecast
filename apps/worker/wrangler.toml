@@ -8,3 +8,12 @@ compatibility_flags = ["nodejs_compat"]
 
 [vars]
 ALLOWED_ORIGINS = "http://localhost:5173,http://localhost:4173"
+
+# Rate limiting best-effort por IP: 60 peticiones/min por ubicación (ARCHITECTURE §6).
+[[ratelimits]]
+name = "RATE_LIMITER"
+namespace_id = "7001"
+
+  [ratelimits.simple]
+  limit = 60
+  period = 60

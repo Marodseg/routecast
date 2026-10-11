@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xmlns:cap="urn:oasis:names:tc:emergency:cap:1.2">
+  <link rel="hub" href="https://pubsubhubbub.appspot.com/"/>
+  <link type="application/atom+xml" rel="self" href="https://feeds.meteoalarm.org/feeds/meteoalarm-legacy-atom-spain"/>
+  <link type="text/html" rel="alternate" href="https://meteoalarm.org"/>
+  <rights>Copyright © 2026 MeteoAlarm.Org. Licensed under terms equivalent to CC BY 4.0, with additional requirements for redistributing outlined in our Terms and Conditions.</rights>
+  <generator>MeteoAlarm Producer Server</generator>
+  <logo>https://feeds.meteoalarm.org/images/logo.svg</logo>
+  <author>
+    <name>meteoalarm.org</name>
+    <uri>https://meteoalarm.org</uri>
+    <email>meteoalarm@geosphere.at</email>
+  </author>
+  <id>tag:meteoalarm.org,2021-02-19:ES</id>
+  <title>MeteoAlarm - Alerting Europe for Extreme Weather</title>
+  <updated>2026-10-11T09:05:24.027612Z</updated>
+  <entry>
+    <cap:geocode>
+      <valueName>EMMA_ID</valueName>
+      <value>ES115</value>
+    </cap:geocode>
+    <link title="Norte y nordeste de Mallorca" href="https://meteoalarm.org?geocode=EMMA_ID:ES115" hreflang="en"/>
+    <cap:areaDesc>Norte y nordeste de Mallorca</cap:areaDesc>
+    <cap:event>Moderate rain warning</cap:event>
+    <cap:sent>2026-10-10T09:34:09+00:00</cap:sent>
+    <cap:expires>2026-10-12T07:59:59+00:00</cap:expires>
+    <cap:effective>2026-10-10T09:31:10+00:00</cap:effective>
+    <cap:onset>2026-10-12T01:00:00+00:00</cap:onset>
+    <cap:certainty>Likely</cap:certainty>
+    <cap:severity>Moderate</cap:severity>
+    <cap:urgency>Future</cap:urgency>
+    <cap:scope>Public</cap:scope>
+    <cap:message_type>Alert</cap:message_type>
+    <cap:status>Actual</cap:status>
+    <cap:identifier>2.49.0.0.724.0.ES.261010093409.645402PRP1120824849</cap:identifier>
+    <link type="application/cap+xml" href="https://feeds.meteoalarm.org/api/v1/warnings/feeds-spain/ba78d78b-2d9a-4a79-81fa-713fdb096c15"/>
+    <link title="Spain" rel="related" href="https://meteoalarm.org?region=ES" hreflang="en"/>
+    <author>
+      <name>meteoalarm.org</name>
+      <uri>https://meteoalarm.org</uri>
+    </author>
+    <published>2026-10-10T09:34:09Z</published>
+    <id>https://feeds.meteoalarm.org/api/v1/warnings/feeds-spain/ba78d78b-2d9a-4a79-81fa-713fdb096c15?index_info=1&amp;index_area=0&amp;index_geocode=0</id>
+    <title>Yellow Rain Warning issued for Spain - Norte y nordeste de Mallorca</title>
+    <updated>2026-10-10T09:34:09Z</updated>
+  </entry>
+  <entry>
+    <cap:geocode>
+      <valueName>EMMA_ID</valueName>
+      <value>ES119</value>
+    </cap:geocode>
+    <link title="Menorca" href="https://meteoalarm.org?geocode=EMMA_ID:ES119" hreflang="en"/>
+    <cap:areaDesc>Menorca</cap:areaDesc>
+    <cap:event>Moderate rain warning</cap:event>
+    <cap:sent>2026-10-10T09:34:09+00:00</cap:sent>
+    <cap:expires>2026-10-12T07:59:59+00:00</cap:expires>
+    <cap:effective>2026-10-10T09:31:10+00:00</cap:effective>
+    <cap:onset>2026-10-12T01:00:00+00:00</cap:onset>
+    <cap:certainty>Likely</cap:certainty>
+    <cap:severity>Moderate</cap:severity>
+    <cap:urgency>Future</cap:urgency>
+    <cap:scope>Public</cap:scope>
+    <cap:message_type>Alert</cap:message_type>
+    <cap:status>Actual</cap:status>
+    <cap:identifier>2.49.0.0.724.0.ES.261010093409.645501PRP1120824849</cap:identifier>
+    <link type="application/cap+xml" href="https://feeds.meteoalarm.org/api/v1/warnings/feeds-spain/6e12d6d3-8adc-4291-9865-f44d416be415"/>
+    <link title="Spain" rel="related" href="https://meteoalarm.org?region=ES" hreflang="en"/>
+    <author>
+      <name>meteoalarm.org</name>
+      <uri>https://meteoalarm.org</uri>
+    </author>
+    <published>2026-10-10T09:34:09Z</published>
+    <id>https://feeds.meteoalarm.org/api/v1/warnings/feeds-spain/6e12d6d3-8adc-4291-9865-f44d416be415?index_info=1&amp;index_area=0&amp;index_geocode=0</id>
+    <title>Yellow Rain Warning issued for Spain - Menorca</title>
+    <updated>2026-10-10T09:34:09Z</updated>
+  </entry>
+  <entry>
+    <cap:geocode>
+      <valueName>EMMA_ID</valueName>
+      <value>ES890</value>
+    </cap:geocode>
+    <link title="Costa - Ampurdán" href="https://meteoalarm.org?geocode=EMMA_ID:ES890" hreflang="en"/>
+    <cap:areaDesc>Costa - Ampurdán</cap:areaDesc>
+    <cap:event>Moderate coastalevent warning</cap:event>
+    <cap:sent>2026-10-09T09:40:09+00:00</cap:sent>
+    <cap:expires>2026-10-10T05:59:59+00:00</cap:expires>
+    <cap:effective>2026-10-09T09:37:30+00:00</cap:effective>
+    <cap:onset>2026-10-09T12:00:00+00:00</cap:onset>
+    <cap:certainty>Likely</cap:certainty>
+    <cap:severity>Moderate</cap:severity>
+    <cap:urgency>Future</cap:urgency>
+    <cap:scope>Public</cap:scope>
+    <cap:message_type>Update</cap:message_type>
+    <cap:status>Actual</cap:status>
+    <cap:identifier>2.49.0.0.724.0.ES.261009094009.691703COCO100638809</cap:identifier>
+    <link type="application/cap+xml" href="https://feeds.meteoalarm.org/api/v1/warnings/feeds-spain/9fe75370-e7b4-4d2c-ac3e-22c2dec7c852"/>
+    <link title="Spain" rel="related" href="https://meteoalarm.org?region=ES" hreflang="en"/>
+    <author>
+      <name>meteoalarm.org</name>
+      <uri>https://meteoalarm.org</uri>
+    </author>
+    <published>2026-10-09T09:40:09Z</published>
+    <id>https://feeds.meteoalarm.org/api/v1/warnings/feeds-spain/9fe75370-e7b4-4d2c-ac3e-22c2dec7c852?index_info=1&amp;index_area=0&amp;index_geocode=0</id>
+    <title>Yellow Coastalevent Warning issued for Spain - Costa - Ampurdán</title>
+    <updated>2026-10-09T09:40:09Z</updated>
+  </entry>
+  <entry>
+    <cap:geocode>
+      <valueName>EMMA_ID</valueName>
+      <value>ES123</value>
+    </cap:geocode>
+    <link title="Lanzarote" href="https://meteoalarm.org?geocode=EMMA_ID:ES123" hreflang="en"/>
+    <cap:areaDesc>Lanzarote</cap:areaDesc>
+    <cap:event>Moderate rain warning</cap:event>
+    <cap:sent>2026-10-09T09:14:08+00:00</cap:sent>
+    <cap:expires>2026-10-10T07:59:59+00:00</cap:expires>
+    <cap:effective>2026-10-09T09:10:30+00:00</cap:effective>
+    <cap:onset>2026-10-09T14:00:00+00:00</cap:onset>
+    <cap:certainty>Likely</cap:certainty>
+    <cap:severity>Moderate</cap:severity>
+    <cap:urgency>Future</cap:urgency>
+    <cap:scope>Public</cap:scope>
+    <cap:message_type>Update</cap:message_type>
+    <cap:status>Actual</cap:status>
+    <cap:identifier>2.49.0.0.724.0.ES.261009091408.659101PRP1100837248</cap:identifier>
+    <link type="application/cap+xml" href="https://feeds.meteoalarm.org/api/v1/warnings/feeds-spain/a52f1ef7-351a-43c4-b042-0b93361344e9"/>
+    <link title="Spain" rel="related" href="https://meteoalarm.org?region=ES" hreflang="en"/>
+    <author>
+      <name>meteoalarm.org</name>
+      <uri>https://meteoalarm.org</uri>
+    </author>
+    <published>2026-10-09T09:14:08Z</published>
+    <id>https://feeds.meteoalarm.org/api/v1/warnings/feeds-spain/a52f1ef7-351a-43c4-b042-0b93361344e9?index_info=1&amp;index_area=0&amp;index_geocode=0</id>
+    <title>Yellow Rain Warning issued for Spain - Lanzarote</title>
+    <updated>2026-10-09T09:14:08Z</updated>
+  </entry>
+</feed>

@@ -45,15 +45,35 @@ export type BBox = [west: number, south: number, east: number, north: number];
 
 export type WarningLevel = 'yellow' | 'orange' | 'red';
 
+/** Fenómeno normalizado (los textos se traducen en la UI). */
+export const WARNING_KINDS = [
+  'wind',
+  'rain',
+  'snow',
+  'storm',
+  'fog',
+  'heat',
+  'cold',
+  'coastal',
+  'dust',
+  'other',
+] as const;
+export type WarningKind = (typeof WARNING_KINDS)[number];
+
 export interface Warning {
   id: string;
   level: WarningLevel;
-  phenomenon: string;
+  kind: WarningKind;
+  /** Zona de aviso (nombre oficial de AEMET, p. ej. «Vega de Granada»). */
   areaName: string;
-  /** Polígonos del área [lng, lat]; vacío si la fuente solo da un nombre de zona. */
+  /** Código de zona AEMET-Meteoalerta si se conoce. */
+  zoneCode?: string;
+  /** Polígonos del área [lng, lat]; vacío si la zona no se pudo localizar. */
   polygons: [number, number][][];
   fromMs: UnixMs;
   toMs: UnixMs;
+  /** Texto oficial breve (p. ej. «Precipitación acumulada en una hora: 20 mm.»), si existe. */
+  description?: string;
   source: 'AEMET' | 'Meteoalarm';
 }
 

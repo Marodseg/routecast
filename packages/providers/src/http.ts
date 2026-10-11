@@ -76,3 +76,54 @@ export async function getJson<S extends z.ZodType>(url: string, o: GetJsonOption
     o.signal.removeEventListener('abort', onAbort);
   }
 }
+
+export interface GetBytesOptions {
+  signal: AbortSignal;
+  timeoutMs?: number;
+  init?: RequestInit;
+  fetchImpl?: typeof fetch;
+  /** Tamaño máximo aceptado (bytes): una respuesta desmesurada es un error, no un cuelgue. */
+  maxBytes?: number;
+}
+
+/** Como `getJson` pero devuelve el cuerpo en bruto (tar de AEMET, XML de Meteoalarm). */
+export async function getBytes(url: string, o: GetBytesOptions): Promise<Result<Uint8Array>> {
+  if (o.signal.aborted) return err({ kind: 'aborted' });
+  const ctrl = new AbortController();
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    ctrl.abort();
+  }, o.timeoutMs ?? 15_000);
+  const onAbort = () => ctrl.abort();
+  o.signal.addEventListener('abort', onAbort, { once: true });
+  const fail = (): Result<never> =>
+    err(o.signal.aborted ? { kind: 'aborted' } : timedOut ? { kind: 'timeout' } : { kind: 'unavailable' });
+  try {
+    let res: Response;
+    try {
+      res = await (o.fetchImpl ?? fetch)(url, { ...o.init, signal: ctrl.signal });
+    } catch {
+      return fail();
+    }
+    if (res.status === 429) {
+      const retryAfterS = parseRetryAfter(res.headers.get('retry-after'));
+      return err(retryAfterS === undefined ? { kind: 'rate_limited' } : { kind: 'rate_limited', retryAfterS });
+    }
+    if (res.status >= 500) return err({ kind: 'unavailable', status: res.status });
+    if (res.status >= 400) return err({ kind: 'bad_response', detail: `HTTP ${res.status}` });
+    let buf: ArrayBuffer;
+    try {
+      buf = await res.arrayBuffer();
+    } catch {
+      return fail();
+    }
+    if (o.maxBytes !== undefined && buf.byteLength > o.maxBytes) {
+      return err({ kind: 'bad_response', detail: `respuesta de ${buf.byteLength} B (máx. ${o.maxBytes})` });
+    }
+    return ok(new Uint8Array(buf));
+  } finally {
+    clearTimeout(timer);
+    o.signal.removeEventListener('abort', onAbort);
+  }
+}
