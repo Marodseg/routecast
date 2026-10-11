@@ -78,8 +78,32 @@ describe('RouteCompare', () => {
     expect(onSelect).toHaveBeenCalledWith('B');
   });
 
-  it('sin riesgo lo dice en texto, no solo con color', () => {
-    render(() => <RouteCompare routes={routes} />);
-    expect(screen.getAllByRole('button')[1]?.textContent).toContain('Sin tramos con riesgo a esta hora');
+  it('sin riesgo lo dice en texto (el nivel), sin repetir una frase vacía', () => {
+    const calm = {
+      ...routes[0],
+      id: 'C',
+      worst: 0,
+      kmHigh: 0,
+      profile: [{ fromKm: 0, toKm: 171, level: 0 }],
+    } as CompareRoute;
+    const { worstText: _, ...noText } = calm;
+    render(() => <RouteCompare routes={[noText]} />);
+    const row = screen.getByRole('button');
+    expect(row.textContent).toContain('Bajo');
+    expect(row.textContent).not.toContain('Sin tramos con riesgo');
+  });
+
+  it('si la previsión acaba antes del destino, el nivel lo dice («Datos hasta km …»)', () => {
+    const late = { ...routes[0], worst: 0, dataUntilKm: 491 } as CompareRoute;
+    render(() => <RouteCompare routes={[late]} />);
+    expect(screen.getByRole('button').textContent).toMatch(/Bajo.*Datos hasta km 491/);
+  });
+
+  it('sin datos no dice «sin tramos con riesgo»', () => {
+    const unknown = { ...routes[1], worst: 'unknown', kmHigh: 0 } as CompareRoute;
+    render(() => <RouteCompare routes={[unknown]} />);
+    const row = screen.getByRole('button');
+    expect(row.textContent).toContain('Sin datos');
+    expect(row.textContent).not.toContain('Sin tramos con riesgo');
   });
 });

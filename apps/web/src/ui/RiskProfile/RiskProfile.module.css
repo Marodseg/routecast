@@ -6,6 +6,10 @@
   overflow: hidden;
 }
 
+.thin {
+  height: 4px;
+}
+
 .mini > i {
   flex-basis: 0;
   min-width: 2px;

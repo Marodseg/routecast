@@ -18,6 +18,8 @@ export interface CompareRoute {
   worst: RiskLevelOrUnknown;
   /** Qué es el peligro del peor punto («Poca visibilidad»): el nivel solo no dice nada. */
   cause?: { factor: Factor; label: string };
+  /** La previsión acaba antes del destino (salida tardía del último día): el nivel solo vale hasta este km. */
+  dataUntilKm?: number;
   kmHigh: number;
   profile: ProfileSegment[];
   /** «17:24 · Racha cruzada de 62 km/h (racha 82)»; vacío si no hay riesgo. */
@@ -82,6 +84,12 @@ export function RouteCompare(props: RouteCompareProps) {
                         </span>
                       )}
                     </Show>
+                    <Show when={r.dataUntilKm !== undefined}>
+                      <span class={s.cause}>
+                        <Icon name="unknown" size={13} />
+                        {t().compare.dataUntil(r.dataUntilKm ?? 0)}
+                      </span>
+                    </Show>
                   </span>
                   <span class={[s.num, s.reveal].join(' ')}>
                     <Odometer value={String(r.kmHigh)} />
@@ -96,7 +104,13 @@ export function RouteCompare(props: RouteCompareProps) {
                 <span class={s.profile}>
                   <Show when={!props.loading} fallback={<span class={s.scan} aria-hidden="true" />}>
                     <span class={s.reveal}>
-                      <RiskProfile segments={r.profile} totalKm={r.distanceKm} routeId={r.id} variant="mini" />
+                      <RiskProfile
+                        segments={r.profile}
+                        totalKm={r.distanceKm}
+                        routeId={r.id}
+                        variant="mini"
+                        thin={r.worst === 0}
+                      />
                     </span>
                   </Show>
                 </span>
@@ -105,12 +119,9 @@ export function RouteCompare(props: RouteCompareProps) {
                     <Icon name="warning" size={14} /> {t().alerts.onRoute(r.alerts ?? 0)}
                   </span>
                 </Show>
-                <Show when={!props.loading}>
-                  <span class={[s.worst, s.reveal].join(' ')}>
-                    <Show when={r.worstText} fallback={t().compare.noRisk}>
-                      {r.worstText}
-                    </Show>
-                  </span>
+                {/* Solo con un riesgo concreto: «Bajo» o «Sin datos» ya lo dice el nivel, en texto. */}
+                <Show when={!props.loading && r.worstText}>
+                  <span class={[s.worst, s.reveal].join(' ')}>{r.worstText}</span>
                 </Show>
               </button>
             </li>

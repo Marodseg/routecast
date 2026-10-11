@@ -67,6 +67,7 @@ export const en: Dict = {
     arrival: (t) => `arrive ${t}`,
     noRisk: 'No risky stretches at this time',
     pending: 'Calculating…',
+    dataUntil: (km) => `Data up to km ${km}`,
     kmHigh: (km) => `${km} km at high or severe risk`,
   },
   profile: {
@@ -150,6 +151,8 @@ export const en: Dict = {
     hail: 'Risk of severe thunderstorm or hail',
     at: (time, km) => `${time} · km ${km}`,
     partial: (factors) => `No ${factors} data on some stretches.`,
+    beyondForecast: (km) =>
+      `The hourly forecast does not reach the end of the trip: no data from km ${km}. Leave earlier or pick another day.`,
     unknown: 'No weather data for that time.',
     upTo: (km) => `up to ${km} km`,
   },

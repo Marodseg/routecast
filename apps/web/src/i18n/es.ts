@@ -66,6 +66,7 @@ export const es = {
     arrival: (t: string) => `llegada ${t}`,
     noRisk: 'Sin tramos con riesgo a esta hora',
     pending: 'Calculando…',
+    dataUntil: (km: number) => `Datos hasta km ${km}`,
     kmHigh: (km: number) => `${km} km en riesgo alto o severo`,
   },
   profile: {
@@ -150,6 +151,8 @@ export const es = {
     hail: 'Riesgo de tormenta fuerte o con granizo',
     at: (time: string, km: number) => `${time} · km ${km}`,
     partial: (factors: string) => `Sin datos de ${factors} en algún tramo.`,
+    beyondForecast: (km: number) =>
+      `La previsión horaria no llega al final del viaje: desde el km ${km} no hay datos. Sal antes o elige otro día.`,
     unknown: 'Sin datos meteorológicos para ese momento.',
     upTo: (km: number) => `hasta ${km} km`,
   },

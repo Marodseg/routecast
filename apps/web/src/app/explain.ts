@@ -30,10 +30,19 @@ export function causeOf(p: EvaluatedPoint, t: Dict): { factor: Factor; label: st
   return { factor: r.dominant, label };
 }
 
-/** Nota de datos parciales («Sin datos de visibilidad en algún tramo.»). */
+/**
+ * Nota de datos parciales («Sin datos de visibilidad en algún tramo.»). Los tramos más allá del final de la previsión
+ * no cuentan: les falta todo y tienen su propia nota (`horizonNote`).
+ */
 export function partialNote(points: readonly EvaluatedPoint[], t: Dict): string | null {
   const missing = new Set<Factor>();
-  for (const p of points) for (const f of p.risk.unknownFactors) missing.add(f);
+  for (const p of points) if (!p.outOfHorizon) for (const f of p.risk.unknownFactors) missing.add(f);
   if (!missing.size) return null;
   return t.explain.partial([...missing].map((f) => t.factor[f].toLowerCase()).join(', '));
+}
+
+/** La previsión horaria no llega al final del viaje (salidas tardías del último día): desde qué km sale sin datos. */
+export function horizonNote(points: readonly EvaluatedPoint[], t: Dict): string | null {
+  const first = points.find((p) => p.outOfHorizon);
+  return first ? t.explain.beyondForecast(Math.round(first.sample.kmFromStart)) : null;
 }

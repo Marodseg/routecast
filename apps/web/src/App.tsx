@@ -2,7 +2,7 @@ import { LOW_CONFIDENCE_AFTER_MS } from '@routecast/core';
 import type { Place } from '@routecast/shared';
 import { batch, createEffect, createMemo, createSignal, Match, on, onCleanup, onMount, Show, Switch } from 'solid-js';
 import s from './App.module.css';
-import { causeOf, explainFactor, partialNote } from './app/explain';
+import { causeOf, explainFactor, horizonNote, partialNote } from './app/explain';
 import { loadGazetteer, mergePlaces, searchGazetteer } from './app/gazetteer';
 import { createServices, type Services } from './app/services';
 import { createAppStore } from './app/store';
@@ -127,6 +127,7 @@ export function App(props: { services?: Services }) {
       const worst = ev.risk.worstPoint === null ? undefined : ev.points[ev.risk.worstPoint];
       const level = ev.risk.worstLevel;
       const cause = worst ? causeOf(worst, t()) : null;
+      const beyond = ev.points.find((p) => p.outOfHorizon);
       return {
         id: view.letter,
         name: view.route.name || t().route.unnamed,
@@ -136,6 +137,7 @@ export function App(props: { services?: Services }) {
         arrival: localWhen(store.departureMs() + view.route.durationS * 1000, store.departureMs(), t().locale),
         worst: level,
         ...(cause ? { cause } : {}),
+        ...(beyond ? { dataUntilKm: Math.round(beyond.sample.kmFromStart) } : {}),
         kmHigh: Math.round(ev.risk.kmAtLevel2Plus),
         profile: ev.risk.segments,
         alerts: alerts.length,
@@ -207,6 +209,10 @@ export function App(props: { services?: Services }) {
     // Mientras llega la previsión todo está «sin datos»: no es un hueco real, es que aún no ha llegado.
     const e = store.selectedEval();
     return e && store.phase() === 'ready' && !store.weatherPending() ? partialNote(e.ev.points, t()) : null;
+  };
+  const beyond = () => {
+    const e = store.selectedEval();
+    return e && store.phase() === 'ready' && !store.weatherPending() ? horizonNote(e.ev.points, t()) : null;
   };
 
   const panel = () => (
@@ -315,6 +321,13 @@ export function App(props: { services?: Services }) {
           <p class={s.note}>{t().status.fallback}</p>
         </Show>
         <Show when={partial()}>{(n) => <p class={s.note}>{n()}</p>}</Show>
+        <Show when={beyond()}>
+          {(n) => (
+            <p class={s.warn}>
+              <Icon name="clock" size={14} /> {n()}
+            </p>
+          )}
+        </Show>
         <Show when={lowConfidence()}>
           <p class={s.note}>{t().confidence.low}</p>
         </Show>

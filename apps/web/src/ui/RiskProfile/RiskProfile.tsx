@@ -15,6 +15,8 @@ export interface RiskProfileProps {
   routeId: string;
   /** 'mini': tira compacta para el comparador. 'full': relieve con eje y cursor. */
   variant?: 'mini' | 'full';
+  /** Tira mini más fina (ruta sin riesgo: menos peso visual para algo que no pasa). */
+  thin?: boolean;
   /** Cursor sincronizado con el mapa (km), controlado desde fuera. */
   cursorKm?: number | null;
   onCursor?: (km: number | null) => void;
@@ -113,7 +115,12 @@ export function RiskProfile(props: RiskProfileProps) {
     <Show
       when={props.variant === 'full'}
       fallback={
-        <span class={s.mini} role="img" aria-label={`${t().profile.label(props.routeId)}. ${summary()}`}>
+        <span
+          class={s.mini}
+          classList={{ [s.thin ?? '']: !!props.thin }}
+          role="img"
+          aria-label={`${t().profile.label(props.routeId)}. ${summary()}`}
+        >
           <For each={segments()}>
             {(sg) => (
               <i class={`risk-fill-${sg.level}`} style={{ 'flex-grow': Math.max(0.001, sg.toKm - sg.fromKm) }} />
