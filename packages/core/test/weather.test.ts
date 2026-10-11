@@ -92,3 +92,48 @@ describe('hoursAround: semántica horaria de Open-Meteo', () => {
     expect(hoursAround(withNull, T0 + 30 * MIN).find((x) => x.timeMs === T0 + H)?.gustsKmH).toBeNull();
   });
 });
+
+describe('hoursAround: búsqueda acotada (rendimiento)', () => {
+  /** Implementación de referencia: recorre toda la serie (la de antes de la búsqueda binaria). */
+  const naive = (hw: ReturnType<typeof hourly>, eta: number, w = 30 * 60_000) => {
+    const instant: number[] = [];
+    const interval: number[] = [];
+    hw.timesMs.forEach((t, i) => {
+      if (Math.abs(t - eta) <= w) instant.push(i);
+      if (t > eta - w && t - H < eta + w) interval.push(i);
+    });
+    return { instant, interval };
+  };
+  const hw = hourly(168, Object.fromEntries(Array.from({ length: 168 }, (_, i) => [i, { gustsKmH: i, tempC: i }])));
+
+  it('da lo mismo que recorrer toda la serie, para cualquier ETA (bordes incluidos)', () => {
+    fc.assert(
+      fc.property(fc.integer({ min: -3 * H, max: 171 * H }), fc.constantFrom(0, 1, -1, 30 * 60_000), (eta, jitter) => {
+        const t = eta + jitter;
+        const ref = naive(hw, t);
+        const got = hoursAround(hw, t);
+        const stamps = [...new Set([...ref.instant, ...ref.interval])].sort((a, b) => a - b);
+        if (ref.instant.length === 0) return got.length === 0;
+        return (
+          got.length === stamps.length &&
+          got.every((g, j) => g.timeMs === hw.timesMs[stamps[j] ?? -1]) &&
+          got.every((g, j) => (g.gustsKmH === null) === !ref.interval.includes(stamps[j] ?? -1))
+        );
+      }),
+    );
+  });
+
+  it('una serie desordenada (dato no confiable) no rompe: mismo resultado que ordenada', () => {
+    const sorted = hourly(6, { 2: { gustsKmH: 50 }, 3: { gustsKmH: 70 } });
+    const order = [3, 0, 5, 1, 4, 2];
+    const shuffled = {
+      ...sorted,
+      timesMs: order.map((i) => sorted.timesMs[i] as number),
+      gustsKmH: order.map((i) => sorted.gustsKmH[i] ?? null),
+    };
+    const eta = T0 + 2 * H + 15 * 60_000;
+    expect(hoursAround(shuffled, eta).map((r) => [r.timeMs, r.gustsKmH])).toEqual(
+      hoursAround(sorted, eta).map((r) => [r.timeMs, r.gustsKmH]),
+    );
+  });
+});

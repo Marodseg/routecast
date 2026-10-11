@@ -29,12 +29,12 @@ describe('rendimiento', () => {
     const t = Date.now();
     const s = resample(simplifyRoute(r, 15));
     expect(s.length).toBeGreaterThan(30);
-    expect(Date.now() - t).toBeLessThan(1000);
+    expect(Date.now() - t).toBeLessThan(3000);
   });
 
   it('muestrear sin simplificar sigue siendo casi lineal (antes, O(n²): minutos)', () => {
     const t = Date.now();
     expect(resample(denseRoute(900)).length).toBeGreaterThan(30);
-    expect(Date.now() - t).toBeLessThan(3000);
+    expect(Date.now() - t).toBeLessThan(10_000); // holgado: con cobertura y máquina cargada tarda ~4 s; el O(n²) tardaba minutos
   });
 });

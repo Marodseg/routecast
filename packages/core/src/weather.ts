@@ -54,6 +54,28 @@ const at = (arr: readonly (number | null)[], i: number): number | null => {
   return v === undefined || v === null || !Number.isFinite(v) ? null : v;
 };
 
+const sortedCache = new WeakMap<readonly number[], boolean>();
+function isSorted(times: readonly number[]): boolean {
+  let v = sortedCache.get(times);
+  if (v === undefined) {
+    v = times.every((t, i) => i === 0 || t >= (times[i - 1] as number));
+    sortedCache.set(times, v);
+  }
+  return v;
+}
+
+/** Primer índice con times[i] ≥ x (times no decreciente). */
+function lowerBound(times: readonly number[], x: number): number {
+  let lo = 0;
+  let hi = times.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if ((times[mid] as number) < x) lo = mid + 1;
+    else hi = mid;
+  }
+  return lo;
+}
+
 /**
  * Registros horarios relevantes para pasar por un punto a `etaMs` (ventana ±30 min, SPEC §6.1), respetando la
  * semántica de Open-Meteo (verificada en open-meteo.com/en/docs, 2026-10-10):
@@ -67,17 +89,27 @@ const at = (arr: readonly (number | null)[], i: number): number | null => {
 export function hoursAround(hw: HourlyWeather, etaMs: UnixMs, windowMs = WINDOW_MS): HourSample[] {
   const instant: number[] = [];
   const interval: number[] = [];
-  hw.timesMs.forEach((t, i) => {
+  const times = hw.timesMs;
+  const consider = (i: number) => {
+    const t = times[i] as number;
     if (Math.abs(t - etaMs) <= windowMs) instant.push(i);
     if (t > etaMs - windowMs && t - HOUR_MS < etaMs + windowMs) interval.push(i);
-  });
+  };
+  // Solo los sellos en [ETA − w, ETA + w + 1 h): búsqueda binaria en vez de recorrer la serie entera (7 días × cada
+  // punto × cada hora de salida del dial). Una serie desordenada (dato externo) se recorre entera.
+  if (isSorted(times)) {
+    const hi = etaMs + windowMs + HOUR_MS;
+    for (let i = lowerBound(times, etaMs - windowMs); i < times.length && (times[i] as number) < hi; i++) consider(i);
+  } else {
+    for (let i = 0; i < times.length; i++) consider(i);
+  }
   if (instant.length === 0) return [];
   const nearestInstant = (t: number): number =>
     instant.reduce((best, i) =>
       Math.abs((hw.timesMs[i] ?? 0) - t) < Math.abs((hw.timesMs[best] ?? 0) - t) ? i : best,
     );
 
-  const stamps = [...new Set([...instant, ...interval])].sort((a, b) => a - b);
+  const stamps = [...new Set([...instant, ...interval])].sort((a, b) => (times[a] as number) - (times[b] as number));
   return stamps.map((i) => {
     const t = hw.timesMs[i] ?? 0;
     const k = instant.includes(i) ? i : nearestInstant(t);
