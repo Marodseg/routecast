@@ -14,7 +14,7 @@
     "zod": "4.6.5"
   },
   "devDependencies": {
-    "msw": "3.0.3"
+    "msw": "3.0.7"
   },
   "sideEffects": false
 }
